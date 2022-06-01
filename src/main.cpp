@@ -7,10 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-constexpr uint32_t W_WIDTH = 1280;
-constexpr uint32_t W_HEIGHT = 720;
-
-constexpr glm::vec3 BG_COLOR = glm::vec3(0.3f);
+#include "Camera.h"
 
 constexpr float CAMERA_ROT_SPEED = 300.0f;
 constexpr glm::vec3 LIGHT_VECTOR = glm::vec3(0.3f, -1.0f, 0.45f);
@@ -20,19 +17,6 @@ constexpr glm::vec3 PAWN_COLOR_WHITE = glm::vec3(0.45f);
 constexpr glm::vec3 PAWN_COLOR_BLACK = glm::vec3(0.2f);
 constexpr glm::vec3 TABLE_COLOR_ODD = glm::vec3(0.25f, 0.22f, 0.15f);
 constexpr glm::vec3 TABLE_COLOR_EVEN = glm::vec3(0.14f, 0.09f, 0.06f);
-
-struct Transform
-{
-	glm::vec3 position;
-	glm::vec3 rotation;
-	glm::vec3 scale;
-};
-
-Transform cameraTransform = {
-	glm::vec3(0.0f, 0.0f, 10.0f),
-	glm::vec3(-40.0f, 0.0f, 0.0f),
-	glm::vec3(1.0f)
-};
 
 int gameState[8][8] = {
 	{0, 2, 0, 2, 0, 2, 0, 2},
@@ -88,58 +72,6 @@ bool canMove = true;
 bool doCameraAnimation = false;
 float desiredCamRot = 0.0f;
 
-glm::vec3 mouseToWorld(float depth)
-{
-	float x = (float)mouseCoords.x / (W_WIDTH * 0.5f) - 1.0f;
-	float y = (float)mouseCoords.y / (W_HEIGHT * 0.5f) - 1.0f;
-	float z = 2.0f * depth - 1.0f;
-
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, -cameraTransform.position);
-	model = glm::rotate(
-		model,
-		glm::radians(-cameraTransform.rotation.x),
-		glm::vec3(1.0f, 0.0f, 0.0f)
-	);
-	model = glm::rotate(
-		model,
-		glm::radians(-cameraTransform.rotation.y),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	model = glm::rotate(
-		model,
-		glm::radians(-cameraTransform.rotation.z),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-
-	glm::mat4 view = glm::lookAt(
-		glm::vec3(0.0f),
-		glm::vec3(0.0f, 0.0f, -1.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	glm::mat4 proj = glm::perspective(
-		glm::radians(45.0f),
-		(float)W_WIDTH / (float)W_HEIGHT,
-		1.0f,
-		1000.0f
-	);
-	glm::mat4 inverse = glm::inverse(proj * view * model);
-	glm::vec4 pos = inverse * glm::vec4(x, -y, z, 1.0f);
-
-	pos.w = 1.0f / pos.w;
-
-	pos.x *= pos.w;
-	pos.y *= pos.w;
-	pos.z *= pos.w;
-
-	return glm::vec3(pos.x, pos.y, pos.z);
-}
-
-glm::vec3 mouseVec()
-{
-	return glm::normalize(mouseToWorld(1.0f) - mouseToWorld(0.0f));
-}
-
 glm::vec3 linePlaneIntersect(glm::vec3 rayVec, glm::vec3 rayPoint, glm::vec3 planeNormal, glm::vec3 planePoint)
 {
 	glm::vec3 diff = rayPoint - planePoint;
@@ -149,10 +81,15 @@ glm::vec3 linePlaneIntersect(glm::vec3 rayVec, glm::vec3 rayPoint, glm::vec3 pla
 	return rayPoint - rayVec * prod3;
 }
 
-void calcSelectedField()
+void calcSelectedField(const Camera& camera)
 {
-	glm::vec3 intersect = linePlaneIntersect(mouseVec(), mouseToWorld(0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-	                                         glm::vec3(0.0f));
+	glm::vec3 intersect = linePlaneIntersect(
+		camera.forwardVec(mouseCoords),
+		camera.unProject(mouseCoords),
+		glm::vec3(0.0f, 1.0f, 0.0f),
+		glm::vec3(0.0f)
+	);
+
 	if (intersect.x > -TABLE_SIZE.x / 2.0f
 		&& intersect.x < TABLE_SIZE.x / 2.0f
 		&& intersect.z > -TABLE_SIZE.y / 2.0f
@@ -402,48 +339,26 @@ void makeMove()
 	}
 }
 
-void animateCamera(float dT)
+void animateCamera(Camera& camera, float dT)
 {
 	if (!doCameraAnimation)
 		return;
-	if (currentPlayer == 1 && cameraTransform.rotation.y > desiredCamRot)
+	glm::vec3 cameraRotation = camera.getRotation();
+	if (currentPlayer == 1 && cameraRotation.y > desiredCamRot)
 	{
-		cameraTransform.rotation.y -= dT * CAMERA_ROT_SPEED;
+		cameraRotation.y -= dT * CAMERA_ROT_SPEED;
 	}
-	else if (currentPlayer == 2 && cameraTransform.rotation.y < desiredCamRot)
+	else if (currentPlayer == 2 && cameraRotation.y < desiredCamRot)
 	{
-		cameraTransform.rotation.y += dT * CAMERA_ROT_SPEED;
+		cameraRotation.y += dT * CAMERA_ROT_SPEED;
 	}
 	else
 	{
-		cameraTransform.rotation.y = desiredCamRot;
+		cameraRotation.y = desiredCamRot;
 		doCameraAnimation = false;
 		canMove = true;
 	}
-}
-
-void init()
-{
-	glClearColor(BG_COLOR.x, BG_COLOR.y, BG_COLOR.z, 1.0);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glm::mat4 view = glm::lookAt(
-		glm::vec3(0.0f),
-		glm::vec3(0.0f, 0.0f, -1.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	glm::mat4 proj = glm::perspective(
-		glm::radians(45.0f),
-		(float)W_WIDTH / (float)W_HEIGHT,
-		1.0f,
-		1000.0f
-	);
-	glLoadMatrixf(glm::value_ptr(proj));
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(glm::value_ptr(view));
-	glEnable(GL_DEPTH_TEST);
-
-	setMovable();
+	camera.setRotation(cameraRotation);
 }
 
 void drawPawn(glm::vec3 color, glm::vec3 center)
@@ -632,63 +547,52 @@ void updateMouseCoords(glm::uvec2 mousePos)
 	mouseCoords.y = mousePos.y;
 }
 
-void applyCameraView()
-{
-	glTranslatef(
-		-cameraTransform.position.x,
-		-cameraTransform.position.y,
-		-cameraTransform.position.z
-	);
-	glRotatef(-cameraTransform.rotation.x, 1.0f, 0.0f, 0.0f);
-	glRotatef(-cameraTransform.rotation.y, 0.0f, 1.0f, 0.0f);
-	glRotatef(-cameraTransform.rotation.z, 0.0f, 0.0f, 1.0f);
-}
-
-void render()
-{
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glLoadIdentity();
-	applyCameraView();
-	drawTable();
-	drawPawns();
-}
-
-void update(float dT)
-{
-	calcSelectedField();
-	animateCamera(dT);
-}
-
 int main(int argc, char* argv[])
 {
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-	auto window = SDL_CreateWindow("SDL",
-	                               SDL_WINDOWPOS_CENTERED,
-	                               SDL_WINDOWPOS_CENTERED,
-	                               W_WIDTH, W_HEIGHT,
-	                               SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+	constexpr glm::uvec2 windowDimensions{1280u, 720u};
+	const auto window = SDL_CreateWindow(
+		"SDL-Checkers",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		windowDimensions.x,
+		windowDimensions.y,
+		SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
+	);
 
-	auto glcontext = SDL_GL_CreateContext(window);
-	SDL_GL_MakeCurrent(window, glcontext);
+	const auto glContext = SDL_GL_CreateContext(window);
+	SDL_GL_MakeCurrent(window, glContext);
 
-	auto run = true;
+	bool windowShouldClose = false;
 	SDL_Event event;
 
 	uint64_t frameTime = SDL_GetPerformanceCounter();
 	uint64_t lastFrameTime;
 	double deltaTime;
 
-	init();
-	while (run)
+	Camera camera;
+	camera.setViewportDimensions({windowDimensions.x, windowDimensions.y});
+	camera.makePerspective(45.0f, 1.0f, 1000.0f);
+	camera.makeLookAt({0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f});
+	camera.setPosition({0.0f, 0.0f, 10.0f});
+	camera.setRotation({-40.0f, 0.0f, 0.0f});
+
+	setMovable();
+
+	constexpr glm::vec3 bgColor(0.3f);
+	glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0);
+	glEnable(GL_DEPTH_TEST);
+
+	while (!windowShouldClose)
 	{
 		lastFrameTime = frameTime;
 		frameTime = SDL_GetPerformanceCounter();
-		deltaTime = (double)((frameTime - lastFrameTime) / (double)SDL_GetPerformanceFrequency());
+		deltaTime = (frameTime - lastFrameTime) / (double)SDL_GetPerformanceFrequency();
 
 		if (SDL_GetTicks() % 10 == 0)
 		{
-			SDL_SetWindowTitle(window, ("SDL | FPS: " + std::to_string((int)round(1.0 / deltaTime))).c_str());
+			SDL_SetWindowTitle(window, ("SDL-Checkers | FPS: " + std::to_string((int)round(1.0 / deltaTime))).c_str());
 		}
 
 		while (SDL_PollEvent(&event))
@@ -696,10 +600,10 @@ int main(int argc, char* argv[])
 			switch (event.type)
 			{
 			case SDL_QUIT:
-				run = false;
+				windowShouldClose = true;
 				break;
 			case SDL_MOUSEMOTION:
-				updateMouseCoords(glm::uvec2(event.button.x, event.button.y));
+				updateMouseCoords({event.button.x, event.button.y});
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 				if (event.button.button == SDL_BUTTON_LEFT)
@@ -712,13 +616,26 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		update(deltaTime);
-		render();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glLoadMatrixf(glm::value_ptr(camera.getProj()));
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glLoadMatrixf(glm::value_ptr(camera.getModelView()));
+
+		calcSelectedField(camera);
+		animateCamera(camera, deltaTime);
+
+		drawTable();
+		drawPawns();
 
 		SDL_GL_SwapWindow(window);
 	}
 
-	SDL_GL_DeleteContext(glcontext);
+	SDL_GL_DeleteContext(glContext);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 
