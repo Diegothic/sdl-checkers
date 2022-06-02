@@ -8,12 +8,13 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Camera.h"
+#include "Renderer.h"
 
 constexpr float CAMERA_ROT_SPEED = 300.0f;
 constexpr glm::vec3 LIGHT_VECTOR = glm::vec3(0.3f, -1.0f, 0.45f);
 constexpr glm::vec2 TABLE_SIZE = glm::vec2(8, 8);
 
-constexpr glm::vec3 PAWN_COLOR_WHITE = glm::vec3(0.45f);
+constexpr glm::vec3 PAWN_COLOR_WHITE = glm::vec3(0.7f);
 constexpr glm::vec3 PAWN_COLOR_BLACK = glm::vec3(0.2f);
 constexpr glm::vec3 TABLE_COLOR_ODD = glm::vec3(0.25f, 0.22f, 0.15f);
 constexpr glm::vec3 TABLE_COLOR_EVEN = glm::vec3(0.14f, 0.09f, 0.06f);
@@ -361,64 +362,73 @@ void animateCamera(Camera& camera, float dT)
 	camera.setRotation(cameraRotation);
 }
 
-void drawPawn(glm::vec3 color, glm::vec3 center)
+void drawPawn(const Renderer& renderer, glm::vec3 color, glm::vec3 center)
 {
 	glPushMatrix();
 	glTranslatef(center.x, center.y, center.z);
 
-	glm::vec3 lightVec = glm::normalize(LIGHT_VECTOR);
-	glm::vec3 normal;
-	float inten;
+	constexpr float step = glm::pi<float>() / 10.0f;
 
-	float r = 0.35f;
-	float h = 0.2f;
-	double step = glm::pi<double>() / 10.0;
-
-	for (double i = 0.0; i < glm::pi<double>() * 2.0; i += step)
+	for (float i = 0.0; i < glm::pi<float>() * 2.0f; i += step)
 	{
-		float x = sin(i);
-		float y = cos(i);
+		constexpr float r = 0.35f;
+		constexpr float h = 0.2f;
+		const float x = glm::sin(i);
+		const float y = glm::cos(i);
+
+		const float xN = glm::sin(i + step);
+		const float yN = glm::cos(i + step);
 
 		//TOP
-		normal = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
-		inten = 1.0f - glm::dot(lightVec, normal);
-		glColor3f(color.x * inten, color.y * inten, color.z * inten);
+		Vertex verticesTop[3];
+		for (auto& vertex : verticesTop)
+		{
+			vertex.normal = { 0.0f, 1.0f, 0.0f };
+			vertex.color = color;
+		}
+		verticesTop[0].position = { 0.0f, h, 0.0f };
+		verticesTop[1].position = { x * r, h, y * r };
+		verticesTop[2].position = { xN * r, h, yN * r };
 
-		glBegin(GL_TRIANGLES);
-
-		glVertex3f(0.0f, h, 0.0f);
-		glVertex3f(sin(i) * r, h, cos(i) * r);
-		glVertex3f(sin(i + step) * r, h, cos(i + step) * r);
-
-		glEnd();
+		Triangle t1 = { verticesTop[0], verticesTop[1], verticesTop[2] };
 
 		//SIDE
-		normal = glm::normalize(glm::vec3(sin(i), 0.0f, cos(i)));
-		inten = 1.0f - glm::dot(lightVec, normal);
-		glColor3f(color.x * inten, color.y * inten, color.z * inten);
+		Vertex verticesSide[4];
 
-		glBegin(GL_QUADS);
+		for (auto& vertex : verticesSide)
+		{
+			vertex.color = color;
+		}
+		verticesSide[0].position = { x * r, h, y * r };
+		verticesSide[1].position = { x * r, 0.0f, y * r };
+		verticesSide[2].position = { xN * r, 0.0f, yN * r };
+		verticesSide[3].position = { xN * r, h, yN * r };
 
-		glVertex3f(sin(i) * r, h, cos(i) * r);
-		glVertex3f(sin(i) * r, 0.0f, cos(i) * r);
-		glVertex3f(sin(i + step) * r, 0.0f, cos(i + step) * r);
-		glVertex3f(sin(i + step) * r, h, cos(i + step) * r);
+		verticesSide[0].normal = { x * r, 0.0f, y * r };
+		verticesSide[1].normal = { x * r, 0.0f, y * r };
+		verticesSide[2].normal = { xN * r, 0.0f, yN * r };
+		verticesSide[3].normal = { xN * r, 0.0f, yN * r };
 
-		glEnd();
+		Triangle t2 = { verticesSide[0], verticesSide[1], verticesSide[3] };
+		Triangle t3 = { verticesSide[1], verticesSide[2], verticesSide[3] };
+
 
 		//BOTTOM
-		normal = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
-		inten = 1.0f - glm::dot(lightVec, normal);
-		glColor3f(color.x * inten, color.y * inten, color.z * inten);
+		Vertex verticesBottom[3];
+		for (auto& vertex : verticesBottom)
+		{
+			vertex.normal = { 0.0f, -1.0f, 0.0f };
+			vertex.color = color;
+		}
+		verticesBottom[0].position = { 0.0f, 0.0f, 0.0f };
+		verticesBottom[1].position = { x * r, 0.0f, y * r };
+		verticesBottom[2].position = { xN * r, 0.0f, yN * r };
 
-		glBegin(GL_TRIANGLES);
+		Triangle t4 = { verticesBottom[0], verticesBottom[1], verticesBottom[2] };
 
-		glVertex3f(0.0f, 0.0f, 0.0f);
-		glVertex3f(sin(i) * r, 0.0f, cos(i) * r);
-		glVertex3f(sin(i + step) * r, 0.0f, cos(i + step) * r);
-
-		glEnd();
+		renderer.drawTriangles({ t1, t2, t3, t4 });
 	}
+
 	glPopMatrix();
 }
 
@@ -486,7 +496,7 @@ void drawLine(glm::vec3 start, glm::vec3 end, float width)
 	glEnd();
 }
 
-void drawPawn(int x, int y)
+void drawPawn(const Renderer& renderer, int x, int y)
 {
 	if (gameState[y][x] == 0)
 	{
@@ -527,16 +537,16 @@ void drawPawn(int x, int y)
 		1.0f * y - TABLE_SIZE.y / 2.0f + 0.5f
 	);
 
-	drawPawn(color, location);
+	drawPawn(renderer, color, location);
 }
 
-void drawPawns()
+void drawPawns(const Renderer& renderer)
 {
 	for (int y = 0; y < TABLE_SIZE.y; y++)
 	{
 		for (int x = 0; x < TABLE_SIZE.x; x++)
 		{
-			drawPawn(x, y);
+			drawPawn(renderer, x, y);
 		}
 	}
 }
@@ -577,6 +587,12 @@ int main(int argc, char* argv[])
 	camera.makeLookAt({0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f});
 	camera.setPosition({0.0f, 0.0f, 10.0f});
 	camera.setRotation({-40.0f, 0.0f, 0.0f});
+
+	LightSource light = { {0.3f, -1.0f, 0.45f}, 1.0f };
+
+	Renderer renderer;
+	renderer.setLightSource(light);
+	renderer.setAmbientLight({ 0.15f, 0.15f, 0.15f });
 
 	setMovable();
 
@@ -630,7 +646,7 @@ int main(int argc, char* argv[])
 		animateCamera(camera, deltaTime);
 
 		drawTable();
-		drawPawns();
+		drawPawns(renderer);
 
 		SDL_GL_SwapWindow(window);
 	}
