@@ -5,6 +5,8 @@
 #include <sdl/SDL_opengl.h>
 #include <glm/glm.hpp>
 
+#include "Window.h"
+
 struct Vertex
 {
 	glm::vec3 position;
@@ -26,12 +28,34 @@ struct LightSource
 class Renderer
 {
 public:
-	Renderer() = default;
+	explicit Renderer(const Window* const window)
+	{
+		m_glContext = window->createContext();
+		glEnable(GL_DEPTH_TEST);
+	}
+
+	~Renderer()
+	{
+		SDL_GL_DeleteContext(m_glContext);
+	}
 
 public:
+	void beginFrame(const Camera* const camera) const
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glLoadMatrixf(glm::value_ptr(camera->getProj()));
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glLoadMatrixf(glm::value_ptr(camera->getModelView()));
+	}
+
 	void drawTriangles(const std::vector<Triangle>& triangles) const
 	{
-		for(const auto& triangle : triangles)
+		for (const auto& triangle : triangles)
 		{
 			drawTriangle(triangle);
 		}
@@ -60,6 +84,12 @@ public:
 	}
 
 public:
+	void setClearColor(const glm::vec3 clearColor)
+	{
+		m_clearColor = clearColor;
+		glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, 1.0);
+	}
+
 	const LightSource& getLightSource() const
 	{
 		return m_lightSource;
@@ -82,6 +112,9 @@ public:
 	}
 
 private:
+	SDL_GLContext m_glContext;
+
+	glm::vec3 m_clearColor = {0.0f, 0.0f, 0.0f};
 	LightSource m_lightSource = {{0.0f, -1.0f, 0.0f}, 1.0f};
 	glm::vec3 m_ambientLight = {0.0f, 0.0f, 0.0f};
 };

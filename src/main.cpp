@@ -7,6 +7,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Window.h"
+#include "GameWindow.h"
 #include "Camera.h"
 #include "Renderer.h"
 
@@ -559,6 +561,16 @@ void updateMouseCoords(glm::uvec2 mousePos)
 
 int main(int argc, char* argv[])
 {
+	constexpr glm::uvec2 windowDimensions{ 1280u, 720u };
+	Window* const window = new GameWindow("SDL-Checkers", windowDimensions);
+	const auto renderer = new Renderer(window);
+
+	window->run();
+
+	delete renderer;
+	delete window;
+
+	/* TODO:: Clean up
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	constexpr glm::uvec2 windowDimensions{1280u, 720u};
@@ -654,6 +666,7 @@ int main(int argc, char* argv[])
 	SDL_GL_DeleteContext(glContext);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+	*/
 
 	return 0;
 }
