@@ -18,7 +18,7 @@ public:
 			SDL_WINDOWPOS_CENTERED,
 			static_cast<int>(m_dimensions.x),
 			static_cast<int>(m_dimensions.y),
-			SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
+			SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
 		);
 	}
 
@@ -38,11 +38,11 @@ public:
 
 	void run()
 	{
-		handleInput();
+		handleEvents();
 		init();
 		while (!m_shouldClose)
 		{
-			handleInput();
+			handleEvents();
 			update(calcDeltaTime());
 			SDL_GL_SwapWindow(m_sdlWindow);
 		}
@@ -56,6 +56,12 @@ public:
 protected:
 	virtual void init() = 0;
 	virtual void update(const float& deltaTime) = 0;
+
+protected:
+	virtual void onResize(const glm::uvec2& windowDimensions)
+	{
+		m_dimensions = windowDimensions;
+	}
 
 protected:
 	bool isKeyDown(SDL_Keycode keycode)
@@ -94,7 +100,7 @@ protected:
 	}
 
 private:
-	void handleInput()
+	void handleEvents()
 	{
 		lastKeyboardState = keyboardState;
 		lastMouseState = mouseState;
@@ -105,6 +111,10 @@ private:
 			{
 			case SDL_QUIT:
 				close();
+				break;
+			case SDL_WINDOWEVENT:
+				if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+					onResize({event.window.data1, event.window.data2});
 				break;
 			case SDL_KEYDOWN:
 				keyboardState[event.key.keysym.sym] = true;

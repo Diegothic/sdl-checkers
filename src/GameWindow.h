@@ -17,4 +17,8 @@ protected:
 	void update(const float& deltaTime) override
 	{
 	}
+
+	void onResize(const glm::uvec2& windowDimensions) override
+	{
+	}
 };
