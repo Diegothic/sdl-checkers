@@ -8,9 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Window.h"
-#include "GameWindow.h"
-#include "Camera.h"
-#include "Renderer.h"
+#include "GameWindow.hpp"
 
 constexpr float CAMERA_ROT_SPEED = 300.0f;
 constexpr glm::vec3 LIGHT_VECTOR = glm::vec3(0.3f, -1.0f, 0.45f);
@@ -385,14 +383,14 @@ void drawPawn(const Renderer& renderer, glm::vec3 color, glm::vec3 center)
 		Vertex verticesTop[3];
 		for (auto& vertex : verticesTop)
 		{
-			vertex.normal = { 0.0f, 1.0f, 0.0f };
+			vertex.normal = {0.0f, 1.0f, 0.0f};
 			vertex.color = color;
 		}
-		verticesTop[0].position = { 0.0f, h, 0.0f };
-		verticesTop[1].position = { x * r, h, y * r };
-		verticesTop[2].position = { xN * r, h, yN * r };
+		verticesTop[0].position = {0.0f, h, 0.0f};
+		verticesTop[1].position = {x * r, h, y * r};
+		verticesTop[2].position = {xN * r, h, yN * r};
 
-		Triangle t1 = { verticesTop[0], verticesTop[1], verticesTop[2] };
+		Triangle t1 = {verticesTop[0], verticesTop[1], verticesTop[2]};
 
 		//SIDE
 		Vertex verticesSide[4];
@@ -401,34 +399,34 @@ void drawPawn(const Renderer& renderer, glm::vec3 color, glm::vec3 center)
 		{
 			vertex.color = color;
 		}
-		verticesSide[0].position = { x * r, h, y * r };
-		verticesSide[1].position = { x * r, 0.0f, y * r };
-		verticesSide[2].position = { xN * r, 0.0f, yN * r };
-		verticesSide[3].position = { xN * r, h, yN * r };
+		verticesSide[0].position = {x * r, h, y * r};
+		verticesSide[1].position = {x * r, 0.0f, y * r};
+		verticesSide[2].position = {xN * r, 0.0f, yN * r};
+		verticesSide[3].position = {xN * r, h, yN * r};
 
-		verticesSide[0].normal = { x * r, 0.0f, y * r };
-		verticesSide[1].normal = { x * r, 0.0f, y * r };
-		verticesSide[2].normal = { xN * r, 0.0f, yN * r };
-		verticesSide[3].normal = { xN * r, 0.0f, yN * r };
+		verticesSide[0].normal = {x * r, 0.0f, y * r};
+		verticesSide[1].normal = {x * r, 0.0f, y * r};
+		verticesSide[2].normal = {xN * r, 0.0f, yN * r};
+		verticesSide[3].normal = {xN * r, 0.0f, yN * r};
 
-		Triangle t2 = { verticesSide[0], verticesSide[1], verticesSide[3] };
-		Triangle t3 = { verticesSide[1], verticesSide[2], verticesSide[3] };
+		Triangle t2 = {verticesSide[0], verticesSide[1], verticesSide[3]};
+		Triangle t3 = {verticesSide[1], verticesSide[2], verticesSide[3]};
 
 
 		//BOTTOM
 		Vertex verticesBottom[3];
 		for (auto& vertex : verticesBottom)
 		{
-			vertex.normal = { 0.0f, -1.0f, 0.0f };
+			vertex.normal = {0.0f, -1.0f, 0.0f};
 			vertex.color = color;
 		}
-		verticesBottom[0].position = { 0.0f, 0.0f, 0.0f };
-		verticesBottom[1].position = { x * r, 0.0f, y * r };
-		verticesBottom[2].position = { xN * r, 0.0f, yN * r };
+		verticesBottom[0].position = {0.0f, 0.0f, 0.0f};
+		verticesBottom[1].position = {x * r, 0.0f, y * r};
+		verticesBottom[2].position = {xN * r, 0.0f, yN * r};
 
-		Triangle t4 = { verticesBottom[0], verticesBottom[1], verticesBottom[2] };
+		Triangle t4 = {verticesBottom[0], verticesBottom[1], verticesBottom[2]};
 
-		renderer.drawTriangles({ t1, t2, t3, t4 });
+		renderer.drawTriangles({t1, t2, t3, t4});
 	}
 
 	glPopMatrix();
@@ -561,13 +559,11 @@ void updateMouseCoords(glm::uvec2 mousePos)
 
 int main(int argc, char* argv[])
 {
-	constexpr glm::uvec2 windowDimensions{ 1280u, 720u };
+	constexpr glm::uvec2 windowDimensions{1280u, 720u};
 	Window* const window = new GameWindow("SDL-Checkers", windowDimensions);
-	const auto renderer = new Renderer(window);
 
 	window->run();
 
-	delete renderer;
 	delete window;
 
 	/* TODO:: Clean up
