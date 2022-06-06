@@ -43,9 +43,11 @@ private:
 			m_transform.position = m_desiredPosition;
 		}
 
-		m_transform.rotation = {movementVector.z * 50.0f, 0.0f, -movementVector.x * 50.0f};
-		m_transform.rotation.x = glm::clamp(m_transform.rotation.x, -60.0f, 60.0f);
-		m_transform.rotation.z = glm::clamp(m_transform.rotation.z, -60.0f, 60.0f);
+		if (movementVector.y == 0.0f) {
+			m_transform.rotation = { movementVector.z * 50.0f, 0.0f, -movementVector.x * 50.0f };
+			m_transform.rotation.x = glm::clamp(m_transform.rotation.x, -60.0f, 60.0f);
+			m_transform.rotation.z = glm::clamp(m_transform.rotation.z, -60.0f, 60.0f);
+		}
 	}
 
 public:
