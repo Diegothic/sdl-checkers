@@ -32,7 +32,7 @@ protected:
 	bool isMouseButtonDown(uint8_t mouseButton);
 	bool isMouseButtonPressed(uint8_t mouseButton);
 	bool isMouseButtonReleased(uint8_t mouseButton);
-	const glm::vec2& getMouseMovement() const;
+	const glm::vec2& getMousePosition() const;
 
 private:
 	void handleEvents();
@@ -59,5 +59,5 @@ private:
 	std::map<uint8_t, bool> m_lastMouseState;
 	std::map<uint8_t, bool> m_mouseState;
 
-	glm::vec2 m_mouseMotion = {0.0f, 0.0f};
+	glm::vec2 m_mousePosition = {};
 };

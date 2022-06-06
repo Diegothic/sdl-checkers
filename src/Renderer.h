@@ -6,31 +6,8 @@
 
 #include "Window.h"
 #include "Camera.h"
-
-struct Vertex
-{
-	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec3 color;
-};
-
-struct Triangle
-{
-	Vertex v1, v2, v3;
-};
-
-struct Transform
-{
-	glm::vec3 position = {0.0f, 0.0f, 0.0f};
-	glm::vec3 rotation = {0.0f, 0.0f, 0.0f};
-	glm::vec3 scale = {1.0f, 1.0f, 1.0f};
-};
-
-struct LightSource
-{
-	glm::vec3 direction;
-	float intensity;
-};
+#include "RenderTypes.h"
+#include "MeshPrototypes.h"
 
 class Renderer
 {
@@ -54,10 +31,14 @@ public:
 	const glm::vec3& getAmbientLight() const { return m_ambientLight; }
 	void setAmbientLight(const glm::vec3& ambientLight) { m_ambientLight = ambientLight; }
 
+	const MeshPrototypes& getMeshPrototypes() const { return m_prototypes; }
+
 private:
 	SDL_GLContext m_glContext;
 
 	glm::vec3 m_clearColor = {0.0f, 0.0f, 0.0f};
 	LightSource m_lightSource = {{0.0f, -1.0f, 0.0f}, 1.0f};
 	glm::vec3 m_ambientLight = {0.0f, 0.0f, 0.0f};
+
+	MeshPrototypes m_prototypes;
 };

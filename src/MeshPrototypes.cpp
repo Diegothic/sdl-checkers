@@ -8,52 +8,89 @@ MeshPrototypes::MeshPrototypes()
 	m_generator.setColor(tableTileColorEven);
 	m_pTileEven = m_generator.makeQuad(1.0f, 1.0f);
 
-	m_generator.setColor(pawnColorLightNeutral);
-	m_pPawnLightNeutral = m_generator.makeCylinder(0.35f, 0.2f);
-	m_pPawnLightMovable = m_pPawnLightNeutral;
-	for (auto& tri : m_pPawnLightMovable)
+	m_generator.setColor(pieceColorLightNeutral);
+	m_pPieceLightNeutral = m_generator.makeCylinder(0.35f, 0.2f);
+	m_pPieceLightMovable = m_pPieceLightNeutral;
+	for (auto& tri : m_pPieceLightMovable)
 	{
-		tri.v1.color += pawnColorOffsetLightMovable;
-		tri.v2.color += pawnColorOffsetLightMovable;
-		tri.v3.color += pawnColorOffsetLightMovable;
+		tri.v1.color += pieceColorOffsetLightMovable;
+		tri.v2.color += pieceColorOffsetLightMovable;
+		tri.v3.color += pieceColorOffsetLightMovable;
 	}
-	m_pPawnLightSelected = m_pPawnLightNeutral;
-	for (auto& tri : m_pPawnLightSelected)
+	m_pPieceLightSelected = m_pPieceLightNeutral;
+	for (auto& tri : m_pPieceLightSelected)
 	{
-		tri.v1.color += pawnColorOffsetLightSelected;
-		tri.v2.color += pawnColorOffsetLightSelected;
-		tri.v3.color += pawnColorOffsetLightSelected;
+		tri.v1.color += pieceColorOffsetLightSelected;
+		tri.v2.color += pieceColorOffsetLightSelected;
+		tri.v3.color += pieceColorOffsetLightSelected;
 	}
-	m_pPawnLightCapture = m_pPawnLightNeutral;
-	for (auto& tri : m_pPawnLightCapture)
+	m_pPieceLightCapture = m_pPieceLightNeutral;
+	for (auto& tri : m_pPieceLightCapture)
 	{
-		tri.v1.color += pawnColorOffsetLightCapture;
-		tri.v2.color += pawnColorOffsetLightCapture;
-		tri.v3.color += pawnColorOffsetLightCapture;
+		tri.v1.color += pieceColorOffsetLightCapture;
+		tri.v2.color += pieceColorOffsetLightCapture;
+		tri.v3.color += pieceColorOffsetLightCapture;
 	}
 
 
-	m_generator.setColor(pawnColorDarkNeutral);
-	m_pPawnDarkNeutral = m_generator.makeCylinder(0.35f, 0.2f);
-	m_pPawnDarkMovable = m_pPawnDarkNeutral;
-	for (auto& tri : m_pPawnDarkMovable)
+	m_generator.setColor(pieceColorDarkNeutral);
+	m_pPieceDarkNeutral = m_generator.makeCylinder(0.35f, 0.2f);
+	m_pPieceDarkMovable = m_pPieceDarkNeutral;
+	for (auto& tri : m_pPieceDarkMovable)
 	{
-		tri.v1.color += pawnColorOffsetDarkMovable;
-		tri.v2.color += pawnColorOffsetDarkMovable;
-		tri.v3.color += pawnColorOffsetDarkMovable;
+		tri.v1.color += pieceColorOffsetDarkMovable;
+		tri.v2.color += pieceColorOffsetDarkMovable;
+		tri.v3.color += pieceColorOffsetDarkMovable;
 	}
-	m_pPawnDarkSelected = m_pPawnDarkNeutral;
-	for (auto& tri : m_pPawnDarkSelected)
+	m_pPieceDarkSelected = m_pPieceDarkNeutral;
+	for (auto& tri : m_pPieceDarkSelected)
 	{
-		tri.v1.color += pawnColorOffsetDarkSelected;
-		tri.v2.color += pawnColorOffsetDarkSelected;
-		tri.v3.color += pawnColorOffsetDarkSelected;
+		tri.v1.color += pieceColorOffsetDarkSelected;
+		tri.v2.color += pieceColorOffsetDarkSelected;
+		tri.v3.color += pieceColorOffsetDarkSelected;
 	}
-	m_pPawnDarkCapture = m_pPawnDarkNeutral;
-	for (auto& tri : m_pPawnDarkCapture)
+	m_pPieceDarkCapture = m_pPieceDarkNeutral;
+	for (auto& tri : m_pPieceDarkCapture)
 	{
-		tri.v1.color += pawnColorOffsetDarkCapture;
-		tri.v2.color += pawnColorOffsetDarkCapture;
-		tri.v3.color += pawnColorOffsetDarkCapture;
+		tri.v1.color += pieceColorOffsetDarkCapture;
+		tri.v2.color += pieceColorOffsetDarkCapture;
+		tri.v3.color += pieceColorOffsetDarkCapture;
 	}
+}
+
+const std::vector<Triangle>& MeshPrototypes::getPiece(PieceType type, PieceState state) const
+{
+	return type == PieceType::Light ? getPieceLight(state) : getPieceDark(state);
+}
+
+const std::vector<Triangle>& MeshPrototypes::getPieceLight(PieceState state) const
+{
+	switch (state)
+	{
+	case PieceState::Neutral:
+		return getPieceLightNeutral();
+	case PieceState::Movable:
+		return getPieceLightMovable();
+	case PieceState::Selected:
+		return getPieceLightSelected();
+	case PieceState::Capture:
+		return getPieceLightCapture();
+	}
+	return getPieceLightNeutral();
+}
+
+const std::vector<Triangle>& MeshPrototypes::getPieceDark(PieceState state) const
+{
+	switch (state)
+	{
+	case PieceState::Neutral:
+		return getPieceDarkNeutral();
+	case PieceState::Movable:
+		return getPieceDarkMovable();
+	case PieceState::Selected:
+		return getPieceDarkSelected();
+	case PieceState::Capture:
+		return getPieceDarkCapture();
+	}
+	return getPieceDarkNeutral();
 }

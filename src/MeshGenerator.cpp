@@ -1,5 +1,7 @@
 #include "MeshGenerator.h"
 
+#include <glm/ext/scalar_constants.hpp>
+
 std::vector<Triangle> MeshGenerator::makeQuad(const float& width, const float& height) const
 {
 	std::vector<Triangle> triangles;

@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-#include "Renderer.h"
+#include "RenderTypes.h"
 
 class MeshGenerator
 {

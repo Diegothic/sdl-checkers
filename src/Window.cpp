@@ -88,9 +88,9 @@ bool Window::isMouseButtonReleased(uint8_t mouseButton)
 	return !m_mouseState[mouseButton] && m_lastMouseState[mouseButton];
 }
 
-const glm::vec2& Window::getMouseMovement() const
+const glm::vec2& Window::getMousePosition() const
 {
-	return m_mouseMotion;
+	return m_mousePosition;
 }
 
 void Window::handleEvents()
@@ -122,7 +122,7 @@ void Window::handleEvents()
 			m_mouseState[m_event.button.button] = false;
 			break;
 		case SDL_MOUSEMOTION:
-			m_mouseMotion = {m_event.button.x, m_event.button.y};
+			m_mousePosition = {m_event.button.x, m_event.button.y};
 			break;
 		default:
 			break;

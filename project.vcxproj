@@ -146,9 +146,13 @@
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\GameWindow.hpp" />
+    <ClInclude Include="src\ManPiece.h" />
     <ClInclude Include="src\MeshGenerator.h" />
     <ClInclude Include="src\MeshPrototypes.h" />
+    <ClInclude Include="src\Piece.h" />
+    <ClInclude Include="src\PieceTypes.h" />
     <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\RenderTypes.h" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
