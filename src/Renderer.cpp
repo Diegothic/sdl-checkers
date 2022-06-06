@@ -58,7 +58,7 @@ void Renderer::drawVertex(
 ) const
 {
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::scale(model, transform.scale);
+	model = glm::translate(model, transform.position);
 	model = glm::rotate(
 		model,
 		glm::radians(transform.rotation.x),
@@ -74,7 +74,24 @@ void Renderer::drawVertex(
 		glm::radians(transform.rotation.z),
 		{0.0f, 0.0f, 1.0f}
 	);
-	model = glm::translate(model, transform.position);
+	model = glm::scale(model, transform.scale);
+
+	glm::mat4 normalModel = glm::mat4(1.0f);
+	normalModel = glm::rotate(
+		normalModel,
+		glm::radians(transform.rotation.x),
+		{1.0f, 0.0f, 0.0f}
+	);
+	normalModel = glm::rotate(
+		normalModel,
+		glm::radians(transform.rotation.y),
+		{0.0f, 1.0f, 0.0f}
+	);
+	normalModel = glm::rotate(
+		normalModel,
+		glm::radians(transform.rotation.z),
+		{0.0f, 0.0f, 1.0f}
+	);
 
 	glm::vec4 position = {
 		vertex.position.x,
@@ -89,13 +106,16 @@ void Renderer::drawVertex(
 		1.0f
 	};
 	position = model * position;
-	normal = model * normal;
+	normal = normalModel * normal;
 
 	const glm::vec3 normalized = glm::normalize(glm::vec3(normal.x, normal.y, normal.z));
-	const float dot = glm::dot(m_lightSource.direction, normalized);
-	float intensity = m_lightSource.intensity * 0.5f * (1.0f - dot);
-	intensity = glm::clamp(intensity, 0.0f, 1.0f);
-	const glm::vec3 color = vertex.color * m_ambientLight + vertex.color * intensity;
+	const float dot = glm::dot(normalized, -m_lightSource.direction);
+	const float intensity = glm::max(0.0f, dot) * m_lightSource.intensity;
+	glm::vec3 multi = {intensity, intensity, intensity};
+	multi.x = glm::clamp(multi.x + m_ambientLight.x, 0.0f, 1.0f);
+	multi.y = glm::clamp(multi.y + m_ambientLight.y, 0.0f, 1.0f);
+	multi.z = glm::clamp(multi.z + m_ambientLight.z, 0.0f, 1.0f);
+	glm::vec3 color = vertex.color * multi;
 
 	glColor3f(color.r, color.g, color.b);
 	glVertex3f(position.x, position.y, position.z);
@@ -115,5 +135,6 @@ void Renderer::setClearColor(const glm::vec3 clearColor)
 void Renderer::setLightSource(const LightSource& lightSource)
 {
 	m_lightSource = lightSource;
+	m_lightSource.direction = glm::normalize(m_lightSource.direction);
 	m_lightSource.intensity = glm::clamp(m_lightSource.intensity, 0.0f, 1.0f);
 }
