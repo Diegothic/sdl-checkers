@@ -18,9 +18,20 @@ public:
 public:
 	void beginFrame(const Camera* const camera) const;
 
-	void drawTriangles(const std::vector<Triangle>& triangles, const Transform& transform = {}) const;
-	void drawTriangle(const Triangle& triangle, const Transform& transform = {}) const;
-	void drawVertex(const Vertex& vertex, const Transform& transform = {}) const;
+	void drawTriangles(
+		const std::vector<Triangle>& triangles,
+		const Transform& transform = {}
+	) const;
+	void drawTriangle(
+		const Triangle& triangle,
+		const glm::mat4& modelMat = glm::mat4(1.0f),
+		const glm::mat4& normalMat = glm::mat4(1.0f)
+	) const;
+	void drawVertex(
+		const Vertex& vertex,
+		const glm::mat4& modelMat = glm::mat4(1.0f),
+		const glm::mat4& normalMat = glm::mat4(1.0f)
+	) const;
 
 public:
 	void setClearColor(const glm::vec3 clearColor);

@@ -32,31 +32,6 @@ void Renderer::drawTriangles(
 	const Transform& transform
 ) const
 {
-	for (const auto& triangle : triangles)
-	{
-		drawTriangle(triangle, transform);
-	}
-}
-
-void Renderer::drawTriangle(
-	const Triangle& triangle,
-	const Transform& transform
-) const
-{
-	glBegin(GL_TRIANGLES);
-
-	drawVertex(triangle.v1, transform);
-	drawVertex(triangle.v2, transform);
-	drawVertex(triangle.v3, transform);
-
-	glEnd();
-}
-
-void Renderer::drawVertex(
-	const Vertex& vertex,
-	const Transform& transform
-) const
-{
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, transform.position);
 	model = glm::rotate(
@@ -76,23 +51,50 @@ void Renderer::drawVertex(
 	);
 	model = glm::scale(model, transform.scale);
 
-	glm::mat4 normalModel = glm::mat4(1.0f);
-	normalModel = glm::rotate(
-		normalModel,
+	glm::mat4 normal = glm::mat4(1.0f);
+	normal = glm::rotate(
+		normal,
 		glm::radians(transform.rotation.x),
 		{1.0f, 0.0f, 0.0f}
 	);
-	normalModel = glm::rotate(
-		normalModel,
+	normal = glm::rotate(
+		normal,
 		glm::radians(transform.rotation.y),
 		{0.0f, 1.0f, 0.0f}
 	);
-	normalModel = glm::rotate(
-		normalModel,
+	normal = glm::rotate(
+		normal,
 		glm::radians(transform.rotation.z),
 		{0.0f, 0.0f, 1.0f}
 	);
 
+	for (const auto& triangle : triangles)
+	{
+		drawTriangle(triangle, model, normal);
+	}
+}
+
+void Renderer::drawTriangle(
+	const Triangle& triangle,
+	const glm::mat4& modelMat,
+	const glm::mat4& normalMat
+) const
+{
+	glBegin(GL_TRIANGLES);
+
+	drawVertex(triangle.v1, modelMat, normalMat);
+	drawVertex(triangle.v2, modelMat, normalMat);
+	drawVertex(triangle.v3, modelMat, normalMat);
+
+	glEnd();
+}
+
+void Renderer::drawVertex(
+	const Vertex& vertex,
+	const glm::mat4& modelMat,
+	const glm::mat4& normalMat
+) const
+{
 	glm::vec4 position = {
 		vertex.position.x,
 		vertex.position.y,
@@ -105,8 +107,8 @@ void Renderer::drawVertex(
 		vertex.normal.z,
 		1.0f
 	};
-	position = model * position;
-	normal = normalModel * normal;
+	position = modelMat * position;
+	normal = normalMat * normal;
 
 	const glm::vec3 normalized = glm::normalize(glm::vec3(normal.x, normal.y, normal.z));
 	const float dot = glm::dot(normalized, -m_lightSource.direction);
@@ -115,7 +117,7 @@ void Renderer::drawVertex(
 	multi.x = glm::clamp(multi.x + m_ambientLight.x, 0.0f, 1.0f);
 	multi.y = glm::clamp(multi.y + m_ambientLight.y, 0.0f, 1.0f);
 	multi.z = glm::clamp(multi.z + m_ambientLight.z, 0.0f, 1.0f);
-	glm::vec3 color = vertex.color * multi;
+	const glm::vec3 color = vertex.color * multi;
 
 	glColor3f(color.r, color.g, color.b);
 	glVertex3f(position.x, position.y, position.z);

@@ -73,7 +73,7 @@ protected:
 						board[z][x]->setDesiredPosition(pos);
 						board[z][x]->setInterpolationSpeed(5.0f);
 					}
-					else if (z > 6)
+					else if (z > 5)
 					{
 						board[z][x] = new ManPiece(PieceType::Light);
 						board[z][x]->setDesiredPosition(pos);
@@ -90,11 +90,26 @@ protected:
 	glm::ivec2 held = SELECTED_NONE;
 	Piece* heldPiece;
 
+	glm::vec2 mousePosLastFrame = getMousePosition();
+
 	void update(const float& deltaTime) override
 	{
 		m_elapsed = m_elapsed + deltaTime;
+
+		const LightSource light = {
+			{glm::cos(m_elapsed) * 0.3f, -1.0f, glm::sin(m_elapsed) * 0.45f},
+			1.0f
+		};
+		m_renderer.setLightSource(light);
+
+		glm::vec2 mouseDelta = getMousePosition() - mousePosLastFrame;
+		mousePosLastFrame = getMousePosition();
+
 		glm::vec3 camRot = m_camera.getRotation();
-		camRot.y = 180.0f;
+		if(isMouseButtonDown(SDL_BUTTON_MIDDLE))
+		{
+			camRot.y -= mouseDelta.x * 0.3f;
+		}
 		m_camera.setRotation(camRot);
 
 		for (int z = 0; z < 10; z++)
@@ -155,7 +170,7 @@ protected:
 			held = SELECTED_NONE;
 			heldPiece = nullptr;
 		}
-		if (isMouseButtonPressed(SDL_BUTTON_LEFT)
+		else if (isMouseButtonPressed(SDL_BUTTON_LEFT)
 			&& selectedPiece != nullptr
 			&& heldPiece == nullptr)
 		{
