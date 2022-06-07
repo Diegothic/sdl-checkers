@@ -43,10 +43,15 @@ private:
 			m_transform.position = m_desiredPosition;
 		}
 
-		if (movementVector.y == 0.0f) {
-			m_transform.rotation = { movementVector.z * 50.0f, 0.0f, -movementVector.x * 50.0f };
+		if (isHeld)
+		{
+			m_transform.rotation = {movementVector.z * 100.0f, 0.0f, -movementVector.x * 100.0f};
 			m_transform.rotation.x = glm::clamp(m_transform.rotation.x, -60.0f, 60.0f);
 			m_transform.rotation.z = glm::clamp(m_transform.rotation.z, -60.0f, 60.0f);
+		}
+		else
+		{
+			m_transform.rotation = {0.0f, 0.0f, 0.0f};
 		}
 	}
 
@@ -61,6 +66,8 @@ public:
 	const PieceState& getState() const { return m_state; }
 	void setState(PieceState state) { m_state = state; }
 
+	void setHeld(const bool& held) { isHeld = held; }
+
 private:
 	Transform m_transform = {};
 	glm::vec3 m_desiredPosition = {};
@@ -69,4 +76,6 @@ private:
 
 	PieceType m_type;
 	PieceState m_state = PieceState::Neutral;
+
+	bool isHeld = false;
 };

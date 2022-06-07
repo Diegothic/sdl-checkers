@@ -6,6 +6,8 @@
 #include "MeshPrototypes.h"
 #include "ManPiece.h"
 
+#define SELECTED_NONE glm::ivec2(-1.0f)
+
 class GameWindow : public Window
 {
 public:
@@ -15,6 +17,23 @@ public:
 	{
 	}
 
+	virtual ~GameWindow() override
+	{
+		for (int i = 0; i < 10; i++)
+		{
+			for (int j = 0; j < 10; j++)
+			{
+				if (board[i][j] != nullptr)
+				{
+					delete board[i][j];
+					board[i][j] = nullptr;
+				}
+			}
+			delete[] board[i];
+		}
+		delete[] board;
+	}
+
 protected:
 	void init() override
 	{
@@ -22,17 +41,54 @@ protected:
 		m_camera.setViewportDimensions({windowDimensions.x, windowDimensions.y});
 		m_camera.makePerspective(45.0f, 1.0f, 1000.0f);
 		m_camera.makeLookAt({0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f});
-		m_camera.setPosition({0.0f, 0.0f, 10.0f});
-		m_camera.setRotation({-40.0f, 0.0f, 0.0f});
+		m_camera.setPosition({0.0f, -1.0f, 11.0f});
+		m_camera.setRotation({-45.0f, 0.0f, 0.0f});
 
 		const LightSource light = {{0.3f, -1.0f, 0.45f}, 1.0f};
 
 		m_renderer.setClearColor({0.15f, 0.15f, 0.15f});
 		m_renderer.setLightSource(light);
 		m_renderer.setAmbientLight({0.4f, 0.4f, 0.4f});
+
+		board = new Piece**[10];
+		for (int i = 0; i < 10; i++)
+		{
+			board[i] = new Piece*[10];
+			for (int j = 0; j < 10; j++)
+			{
+				board[i][j] = nullptr;
+			}
+		}
+
+		for (int z = 0; z < 10; z++)
+		{
+			for (int x = 0; x < 10; x++)
+			{
+				const glm::vec3 pos = {x - 10 / 2.0f + 0.5f, 0.0f, z - 10 / 2.0f + 0.5f};
+				if (z % 2 == 0 && x % 2 != 0 || z % 2 != 0 && x % 2 == 0)
+				{
+					if (z < 4)
+					{
+						board[z][x] = new ManPiece(PieceType::Dark);
+						board[z][x]->setDesiredPosition(pos);
+						board[z][x]->setInterpolationSpeed(5.0f);
+					}
+					else if (z > 6)
+					{
+						board[z][x] = new ManPiece(PieceType::Light);
+						board[z][x]->setDesiredPosition(pos);
+						board[z][x]->setInterpolationSpeed(5.0f);
+					}
+				}
+			}
+		}
 	}
 
-	ManPiece piece = ManPiece(PieceType::Light);
+	Piece*** board;
+	glm::ivec2 selected = SELECTED_NONE;
+	Piece* selectedPiece;
+	glm::ivec2 held = SELECTED_NONE;
+	Piece* heldPiece;
 
 	void update(const float& deltaTime) override
 	{
@@ -40,6 +96,26 @@ protected:
 		glm::vec3 camRot = m_camera.getRotation();
 		camRot.y = 180.0f;
 		m_camera.setRotation(camRot);
+
+		for (int z = 0; z < 10; z++)
+		{
+			for (int x = 0; x < 10; x++)
+			{
+				if (board[z][x] != nullptr)
+					board[z][x]->setState(PieceState::Neutral);
+			}
+		}
+
+		updateSelected();
+		if (heldPiece != nullptr)
+		{
+			heldPiece->setState(PieceState::Selected);
+		}
+		else if (selected != SELECTED_NONE
+			&& board[selected.x][selected.y] != nullptr)
+		{
+			board[selected.x][selected.y]->setState(PieceState::Selected);
+		}
 
 		const glm::vec2 mousePos = getMousePosition();
 		const glm::vec3 mousePosWorld = m_camera.unProject(mousePos);
@@ -57,63 +133,79 @@ protected:
 			{0.0f, 0.0f, 0.0f}
 		);
 
-		piece.setInterpolationSpeed(15.0f);
-
-		if (isMouseButtonDown(SDL_BUTTON_LEFT))
+		if (isMouseButtonPressed(SDL_BUTTON_RIGHT)
+			&& heldPiece != nullptr)
 		{
-			piece.setDesiredPosition(intersectUp);
+			heldPiece->setHeld(false);
+			heldPiece->setDesiredPosition(positionAt(held.y, held.x));
+			held = SELECTED_NONE;
+			heldPiece = nullptr;
 		}
-		if (isMouseButtonReleased(SDL_BUTTON_LEFT))
+		if (isMouseButtonPressed(SDL_BUTTON_LEFT)
+			&& heldPiece != nullptr
+			&& selected != SELECTED_NONE
+			&& (board[selected.x][selected.y] == nullptr
+				|| board[selected.x][selected.y] == heldPiece))
 		{
-			piece.setDesiredPosition(intersect);
+			heldPiece->setHeld(false);
+			heldPiece->setDesiredPosition(positionAt(selected.y, selected.x));
+
+			board[held.x][held.y] = nullptr;
+			board[selected.x][selected.y] = heldPiece;
+			held = SELECTED_NONE;
+			heldPiece = nullptr;
 		}
-		piece.update(deltaTime);
-
-		m_renderer.beginFrame(&m_camera);
-		piece.render(m_renderer);
-
-		Transform t1{};
-		t1.position = glm::vec3(-2.0f, 0.1f, 0.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceDarkNeutral(), t1);
-		t1.position = glm::vec3(-1.0f, 0.1f, 0.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceDarkMovable(), t1);
-		t1.position = glm::vec3(0.0f, 0.1f, 0.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceDarkSelected(), t1);
-		t1.position = glm::vec3(1.0f, 0.1f, 0.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceDarkCapture(), t1);
-
-		t1.position = glm::vec3(-2.0f, 0.1f, 1.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceLightNeutral(), t1);
-		t1.position = glm::vec3(-1.0f, 0.1f, 1.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceLightMovable(), t1);
-		t1.position = glm::vec3(0.0f, 0.1f, 1.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceLightSelected(), t1);
-		t1.position = glm::vec3(1.0f, 0.1f, 1.0f);
-		m_renderer.drawTriangles(m_prototypes.getPieceLightCapture(), t1);
-
-		Transform t2{};
-		for (int z = 0; z < 8; z++)
+		if (isMouseButtonPressed(SDL_BUTTON_LEFT)
+			&& selectedPiece != nullptr
+			&& heldPiece == nullptr)
 		{
-			for (int x = 0; x < 8; x++)
+			held = selected;
+			heldPiece = selectedPiece;
+			heldPiece->setHeld(true);
+		}
+		if (heldPiece != nullptr)
+		{
+			heldPiece->setDesiredPosition(intersectUp);
+		}
+
+		for (int z = 0; z < 10; z++)
+		{
+			for (int x = 0; x < 10; x++)
 			{
-				const glm::vec3 pos = {x - 8 / 2.0f + 0.5f, -0.1f, z - 8 / 2.0f + 0.5f};
-				t2.position = pos;
-				if (z % 2 == 0 && x % 2 == 0 || z % 2 != 0 && x % 2 != 0)
-				{
-					m_renderer.drawTriangles(m_prototypes.getTileOdd(), t2);
-				}
-				else
-				{
-					m_renderer.drawTriangles(m_prototypes.getTileEven(), t2);
-				}
+				if (board[z][x] != nullptr)
+					board[z][x]->update(deltaTime);
 			}
 		}
 
-		Transform t3{};
-		t3.position = glm::vec3(0.0f, 2.0f, 0.0f);
-		t3.rotation.x = glm::sin(m_elapsed * 8.0f) * 10.0f;
-		t3.rotation.z = glm::cos(m_elapsed * 8.0f) * 10.0f;
-		m_renderer.drawTriangles(m_prototypes.getPieceLightNeutral(), t3);
+		m_renderer.beginFrame(&m_camera);
+
+		for (int z = 0; z < 10; z++)
+		{
+			for (int x = 0; x < 10; x++)
+			{
+				if (board[z][x] != nullptr)
+					board[z][x]->render(m_renderer);
+			}
+		}
+
+		Transform boardTransform = {};
+		for (int z = 0; z < 10; z++)
+		{
+			for (int x = 0; x < 10; x++)
+			{
+				const glm::vec3 pos = positionAt(x, z);
+				boardTransform.position = pos;
+				boardTransform.position.y = -0.1f;
+				if (z % 2 == 0 && x % 2 == 0 || z % 2 != 0 && x % 2 != 0)
+				{
+					m_renderer.drawTriangles(m_prototypes.getTileOdd(), boardTransform);
+				}
+				else
+				{
+					m_renderer.drawTriangles(m_prototypes.getTileEven(), boardTransform);
+				}
+			}
+		}
 	}
 
 	void onResize(const glm::uvec2& windowDimensions) override
@@ -125,6 +217,44 @@ protected:
 	}
 
 protected:
+	glm::vec3 positionAt(int x, int z) const
+	{
+		return {
+			static_cast<float>(x) - 10.0f / 2.0f + 0.5f,
+			0.0f,
+			static_cast<float>(z) - 10.0f / 2.0f + 0.5f
+		};
+	}
+
+	void updateSelected()
+	{
+		const glm::vec2 mousePos = getMousePosition();
+		glm::vec3 intersect = linePlaneIntersect(
+			m_camera.forwardVec(mousePos),
+			m_camera.unProject(mousePos),
+			{0.0f, 1.0f, 0.0f},
+			{0.0f, 0.0f, 0.0f}
+		);
+		intersect.x += 5.0f;
+		intersect.z += 5.0f;
+		if (intersect.x >= 0.0f
+			&& intersect.x < 10.0f
+			&& intersect.z >= 0.0f
+			&& intersect.z <= 10.0f)
+		{
+			selected = {
+				static_cast<int>(intersect.z),
+				static_cast<int>(intersect.x)
+			};
+			selectedPiece = board[selected.x][selected.y];
+		}
+		else
+		{
+			selected = {-1, -1};
+			selectedPiece = nullptr;
+		}
+	}
+
 	glm::vec3 linePlaneIntersect(
 		const glm::vec3& rayVec,
 		const glm::vec3& rayPoint,
