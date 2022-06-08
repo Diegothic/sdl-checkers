@@ -8,7 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Window.h"
-#include "GameWindow.hpp"
+#include "GameWindow.h"
 
 constexpr float CAMERA_ROT_SPEED = 300.0f;
 constexpr glm::vec2 TABLE_SIZE = glm::vec2(8, 8);

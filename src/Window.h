@@ -25,7 +25,7 @@ protected:
 protected:
 	virtual void onResize(const glm::uvec2& windowDimensions);
 
-protected:
+public:
 	bool isKeyDown(SDL_Keycode keycode);
 	bool isKeyPressed(SDL_Keycode keycode);
 	bool isKeyReleased(SDL_Keycode keycode);
@@ -33,6 +33,7 @@ protected:
 	bool isMouseButtonPressed(uint8_t mouseButton);
 	bool isMouseButtonReleased(uint8_t mouseButton);
 	const glm::vec2& getMousePosition() const;
+	glm::vec2 getMouseDelta() const;
 
 private:
 	void handleEvents();
@@ -60,4 +61,5 @@ private:
 	std::map<uint8_t, bool> m_mouseState;
 
 	glm::vec2 m_mousePosition = {};
+	glm::vec2 m_mousePositionLastFrame = {};
 };

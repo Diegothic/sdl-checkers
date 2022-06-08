@@ -137,6 +137,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\Checkers.cpp" />
+    <ClCompile Include="src\GameWindow.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MeshGenerator.cpp" />
     <ClCompile Include="src\MeshPrototypes.cpp" />
@@ -145,7 +147,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
-    <ClInclude Include="src\GameWindow.hpp" />
+    <ClInclude Include="src\Checkers.h" />
+    <ClInclude Include="src\GameWindow.h" />
     <ClInclude Include="src\ManPiece.h" />
     <ClInclude Include="src\MeshGenerator.h" />
     <ClInclude Include="src\MeshPrototypes.h" />
@@ -153,6 +156,7 @@
     <ClInclude Include="src\PieceTypes.h" />
     <ClInclude Include="src\Renderer.h" />
     <ClInclude Include="src\RenderTypes.h" />
+    <ClInclude Include="src\VectorMath.hpp" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

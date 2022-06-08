@@ -93,10 +93,16 @@ const glm::vec2& Window::getMousePosition() const
 	return m_mousePosition;
 }
 
+glm::vec2 Window::getMouseDelta() const
+{
+	return m_mousePositionLastFrame - m_mousePosition;
+}
+
 void Window::handleEvents()
 {
 	m_lastKeyboardState = m_keyboardState;
 	m_lastMouseState = m_mouseState;
+	m_mousePositionLastFrame = m_mousePosition;
 	SDL_Event m_event;
 	while (SDL_PollEvent(&m_event))
 	{

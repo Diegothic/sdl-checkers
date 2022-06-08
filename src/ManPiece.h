@@ -25,7 +25,7 @@ public:
 		renderer.drawTriangles(mesh, getTransform());
 	}
 
-	virtual std::vector<glm::uvec2> getViableMoves() const override
+	virtual std::vector<glm::ivec2> getViableMoves() const override
 	{
 		return {};
 	}

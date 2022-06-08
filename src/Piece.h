@@ -24,7 +24,7 @@ public:
 
 	virtual void render(const Renderer& renderer) const = 0;
 
-	virtual std::vector<glm::uvec2> getViableMoves() const = 0;
+	virtual std::vector<glm::ivec2> getViableMoves() const = 0;
 
 private:
 	void interpolatePosition(float speed)
@@ -43,7 +43,7 @@ private:
 			m_transform.position = m_desiredPosition;
 		}
 
-		if (isHeld)
+		if (m_isHeld)
 		{
 			m_transform.rotation = {movementVector.z * 100.0f, 0.0f, -movementVector.x * 100.0f};
 			m_transform.rotation.x = glm::clamp(m_transform.rotation.x, -60.0f, 60.0f);
@@ -66,7 +66,10 @@ public:
 	const PieceState& getState() const { return m_state; }
 	void setState(PieceState state) { m_state = state; }
 
-	void setHeld(const bool& held) { isHeld = held; }
+	void setHeld(const bool& held) { m_isHeld = held; }
+
+	const bool& isMovable() const { return m_isMovable; }
+	void setMovable(const bool& movable) { m_isMovable = movable; }
 
 private:
 	Transform m_transform = {};
@@ -77,5 +80,6 @@ private:
 	PieceType m_type;
 	PieceState m_state = PieceState::Neutral;
 
-	bool isHeld = false;
+	bool m_isHeld = false;
+	bool m_isMovable = false;
 };
