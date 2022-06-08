@@ -29,10 +29,20 @@ class Checkers
 		}
 	};
 
+	enum GameState
+	{
+		PlayerMoving,
+		ChangingPlayer,
+		Ended
+	};
+
 public:
 	Piece*** board;
 
+	GameState state = GameState::PlayerMoving;
 	Player currentPlayer = Player::Light;
+	bool capturedThisTurn = false;
+	glm::ivec2 capturingPieceCoords;
 
 	Selection selected = Selection::NONE;
 	Selection held = Selection::NONE;
@@ -70,28 +80,45 @@ protected:
 
 	std::vector<glm::ivec2> getMovablePieces(Player player) const
 	{
+		if (capturedThisTurn)
+		{
+			return {capturingPieceCoords};
+		}
+		const bool playerHasCaptures = hasCaptures(player);
 		std::vector<glm::ivec2> movables;
-		const int forward = player == Player::Light ? -1 : 1;
 		for (int z = 0; z < m_boardSize; z++)
 		{
 			for (int x = 0; x < m_boardSize; x++)
 			{
 				if (board[z][x] != nullptr
-					&& board[z][x]->getType() == player)
+					&& board[z][x]->getType() == player
+					&& !board[z][x]->getViableMoves().empty()
+					&& (!playerHasCaptures
+						|| (playerHasCaptures
+							&& board[z][x]->getCapturesCount() > 0)))
 				{
-					// TODO:: change to check for viable moves
-					if ((z + forward >= 0 && z + forward < m_boardSize)
-						&& ((board[z + forward][x + 1] == nullptr
-								&& x + 1 < m_boardSize)
-							|| (board[z + forward][x - 1] == nullptr
-								&& x - 1 >= 0)))
-					{
-						movables.push_back({z, x});
-					}
+					movables.push_back({z, x});
 				}
 			}
 		}
 		return movables;
+	}
+
+	bool hasCaptures(Player player) const
+	{
+		for (int z = 0; z < m_boardSize; z++)
+		{
+			for (int x = 0; x < m_boardSize; x++)
+			{
+				if (board[z][x] != nullptr
+					&& board[z][x]->getType() == player
+					&& board[z][x]->getCapturesCount() > 0)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 private:

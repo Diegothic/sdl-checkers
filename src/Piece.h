@@ -24,7 +24,11 @@ public:
 
 	virtual void render(const Renderer& renderer) const = 0;
 
-	virtual std::vector<glm::ivec2> getViableMoves() const = 0;
+	virtual void recalculateMoves(
+		const glm::ivec2& coords,
+		Piece*** board,
+		int boardSize
+	) = 0;
 
 private:
 	void interpolatePosition(float speed)
@@ -71,6 +75,16 @@ public:
 	const bool& isMovable() const { return m_isMovable; }
 	void setMovable(const bool& movable) { m_isMovable = movable; }
 
+	const bool& isCaptured() const { return m_isCaptured; }
+	void setCaptured(const bool& captured) { m_isCaptured = captured; }
+
+	const std::vector<Move>& getViableMoves() const { return m_viableMoves; }
+	const int& getCapturesCount() const { return m_capturesCount; }
+
+protected:
+	std::vector<Move> m_viableMoves;
+	int m_capturesCount = 0;
+
 private:
 	Transform m_transform = {};
 	glm::vec3 m_desiredPosition = {};
@@ -82,4 +96,5 @@ private:
 
 	bool m_isHeld = false;
 	bool m_isMovable = false;
+	bool m_isCaptured = false;
 };
