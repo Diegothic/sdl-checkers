@@ -149,6 +149,7 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Checkers.h" />
     <ClInclude Include="src\GameWindow.h" />
+    <ClInclude Include="src\KingPiece.h" />
     <ClInclude Include="src\ManPiece.h" />
     <ClInclude Include="src\MeshGenerator.h" />
     <ClInclude Include="src\MeshPrototypes.h" />

@@ -1,6 +1,7 @@
 #include "Checkers.h"
 
 #include "GameWindow.h"
+#include "KingPiece.h"
 #include "ManPiece.h"
 
 const Checkers::Selection Checkers::Selection::NONE = {nullptr, {-1.0f, -1.0f}};
@@ -191,6 +192,15 @@ void Checkers::update(const float& deltaTime)
 						}
 					}
 				}
+			}
+
+			if ((currentPlayer == Player::Light && selected.coords.x == 9)
+				|| (currentPlayer == Player::Dark && selected.coords.x == 0))
+			{
+				Piece* kingPiece = new KingPiece(*held.piece);
+				held.piece = nullptr;
+				delete board[selected.coords.x][selected.coords.y];
+				board[selected.coords.x][selected.coords.y] = kingPiece;
 			}
 
 			held = Selection::NONE;

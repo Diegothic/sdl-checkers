@@ -14,6 +14,20 @@ public:
 	{
 	}
 
+	Piece(const Piece& other)
+	{
+		m_viableMoves = other.m_viableMoves;
+		m_capturesCount = other.m_capturesCount;
+		m_transform = other.m_transform;
+		m_desiredPosition = other.m_desiredPosition;
+		m_interSpeed = other.m_interSpeed;
+		m_type = other.m_type;
+		m_state = other.m_state;
+		m_isHeld = other.m_isHeld;
+		m_isMovable = other.m_isMovable;
+		m_isCaptured = other.m_isCaptured;
+	}
+
 	virtual ~Piece() = default;
 
 public:
@@ -28,7 +42,11 @@ public:
 		const glm::ivec2& coords,
 		Piece*** board,
 		int boardSize
-	) = 0;
+	)
+	{
+		m_viableMoves.clear();
+		m_capturesCount = 0;
+	}
 
 private:
 	void interpolatePosition(float speed)
