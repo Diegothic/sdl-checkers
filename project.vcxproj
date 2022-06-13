@@ -142,6 +142,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MeshGenerator.cpp" />
     <ClCompile Include="src\MeshPrototypes.cpp" />
+    <ClCompile Include="src\PieceTypes.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>

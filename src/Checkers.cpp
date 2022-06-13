@@ -4,19 +4,17 @@
 #include "KingPiece.h"
 #include "ManPiece.h"
 
-const Checkers::Selection Checkers::Selection::NONE = {nullptr, {-1.0f, -1.0f}};
-
 Checkers::Checkers(GameWindow* window, uint8_t boardSize)
 	: m_window(window),
 	  m_boardSize(boardSize)
 {
-	board = new Piece* *[m_boardSize];
+	m_board = new Piece* *[m_boardSize];
 	for (int i = 0; i < m_boardSize; i++)
 	{
-		board[i] = new Piece*[m_boardSize];
+		m_board[i] = new Piece*[m_boardSize];
 		for (int j = 0; j < m_boardSize; j++)
 		{
-			board[i][j] = nullptr;
+			m_board[i][j] = nullptr;
 		}
 	}
 }
@@ -27,15 +25,15 @@ Checkers::~Checkers()
 	{
 		for (int j = 0; j < m_boardSize; j++)
 		{
-			if (board[i][j] != nullptr)
+			if (m_board[i][j] != nullptr)
 			{
-				delete board[i][j];
-				board[i][j] = nullptr;
+				delete m_board[i][j];
+				m_board[i][j] = nullptr;
 			}
 		}
-		delete[] board[i];
+		delete[] m_board[i];
 	}
-	delete[] board;
+	delete[] m_board;
 }
 
 void Checkers::reset() const
@@ -44,34 +42,101 @@ void Checkers::reset() const
 	{
 		for (int x = 0; x < m_boardSize; x++)
 		{
-			if (board[z][x] != nullptr)
+			if (m_board[z][x] != nullptr)
 			{
-				delete board[z][x];
-				board[z][x] = nullptr;
+				delete m_board[z][x];
+				m_board[z][x] = nullptr;
 			}
 
-			const glm::vec3 pos = positionAt(x, z);
+			const glm::vec3 pos = positionFromBoardCoords(x, z);
 			if (isDarkTile(x, z))
 			{
 				if (z < m_boardSize / 2 - 1)
 				{
-					board[z][x] = new ManPiece(PieceType::Dark);
-					board[z][x]->setDesiredPosition(pos);
-					board[z][x]->setInterpolationSpeed(5.0f);
+					m_board[z][x] = new ManPiece(PieceType::Dark);
+					m_board[z][x]->setDesiredPosition(pos);
+					m_board[z][x]->setInterpolationSpeed(5.0f);
 				}
 				else if (z > m_boardSize / 2)
 				{
-					board[z][x] = new ManPiece(PieceType::Light);
-					board[z][x]->setDesiredPosition(pos);
-					board[z][x]->setInterpolationSpeed(5.0f);
+					m_board[z][x] = new ManPiece(PieceType::Light);
+					m_board[z][x]->setDesiredPosition(pos);
+					m_board[z][x]->setInterpolationSpeed(5.0f);
 				}
+			}
+		}
+	}
+	updateBoardState();
+}
+
+void Checkers::update(const float& deltaTime)
+{
+	switch (m_state)
+	{
+	case GameState::PlayerMoving:
+		updateStatePlayerMoving();
+		break;
+	case GameState::ChangingPlayer:
+		updateStateChangingPlayer();
+		break;
+	case GameState::Ended:
+		updateStateEnded();
+		break;
+	}
+
+	forEachPiece([&deltaTime](Piece* const piece, int z, int x)
+	{
+		piece->update(deltaTime);
+	});
+}
+
+
+void Checkers::updateStatePlayerMoving()
+{
+	updateHeldPosition();
+	updateSelection();
+	updatePieceStates();
+
+	if (m_window->isMouseButtonPressed(SDL_BUTTON_RIGHT))
+	{
+		putBackPiece();
+	}
+
+	if (m_window->isMouseButtonPressed(SDL_BUTTON_LEFT))
+	{
+		if (m_held == Selection::NONE)
+		{
+			pickUpPiece();
+		}
+		else
+		{
+			const auto possibleMove = std::find(
+				m_held.piece->getViableMoves().begin(),
+				m_held.piece->getViableMoves().end(),
+				glm::ivec2(m_selected.coords.x, m_selected.coords.y)
+			);
+			if (possibleMove != m_held.piece->getViableMoves().end())
+			{
+				makeMove(*possibleMove);
 			}
 		}
 	}
 }
 
-void Checkers::update(const float& deltaTime)
+void Checkers::updateStateChangingPlayer()
 {
+}
+
+void Checkers::updateStateEnded()
+{
+}
+
+void Checkers::updateHeldPosition() const
+{
+	if (m_held == Selection::NONE)
+	{
+		return;
+	}
 	const glm::vec2 mousePos = m_window->getMousePosition();
 	const glm::vec3 intersectUp = VectorMath::linePlaneIntersect(
 		m_window->getCamera().forwardVec(mousePos),
@@ -79,236 +144,287 @@ void Checkers::update(const float& deltaTime)
 		{0.0f, 1.0f, 0.0f},
 		{0.0f, 1.5f, 0.0f}
 	);
-
-	selected = getSelection();
-
-	forEachPiece([](Piece* const piece)
-	{
-		piece->setState(PieceState::Neutral);
-		piece->setMovable(false);
-		if (piece->isCaptured())
-			piece->setState(PieceState::Capture);
-	});
-
-	for (int z = 0; z < m_boardSize; z++)
-	{
-		for (int x = 0; x < m_boardSize; x++)
-		{
-			if (board[z][x] != nullptr)
-				board[z][x]->recalculateMoves(
-					{z, x},
-					board,
-					m_boardSize
-				);
-		}
-	}
-
-	if (held == Selection::NONE)
-	{
-		const auto movables = getMovablePieces(currentPlayer);
-		for (const auto& movable : movables)
-		{
-			board[movable.x][movable.y]->setState(PieceState::Movable);
-			board[movable.x][movable.y]->setMovable(true);
-		}
-	}
-
-	if (held != Selection::NONE)
-	{
-		held.piece->setState(PieceState::Selected);
-		for (const auto& move : held.piece->getViableMoves())
-		{
-			if (move.captures)
-			{
-				board[move.capture.x][move.capture.y]->setState(PieceState::Capture);
-			}
-		}
-	}
-	else if (selected != Selection::NONE
-		&& board[selected.coords.x][selected.coords.y] != nullptr)
-	{
-		board[selected.coords.x][selected.coords.y]->setState(PieceState::Selected);
-	}
-
-	if (m_window->isMouseButtonPressed(SDL_BUTTON_RIGHT)
-		&& held != Selection::NONE)
-	{
-		held.piece->setHeld(false);
-		held.piece->setDesiredPosition(positionAt(held.coords.y, held.coords.x));
-		held = Selection::NONE;
-	}
-
-	if (held != Selection::NONE)
-	{
-		held.piece->setDesiredPosition(intersectUp);
-
-		const auto possibleMove = std::find(
-			held.piece->getViableMoves().begin(),
-			held.piece->getViableMoves().end(),
-			glm::ivec2(selected.coords.x, selected.coords.y)
-		);
-
-		if (m_window->isMouseButtonPressed(SDL_BUTTON_LEFT)
-			&& selected != Selection::NONE
-			&& possibleMove != held.piece->getViableMoves().end())
-		{
-			// Player made move
-			held.piece->setHeld(false);
-			held.piece->setDesiredPosition(
-				positionAt(selected.coords.y, selected.coords.x)
-			);
-
-			board[held.coords.x][held.coords.y] = nullptr;
-			board[selected.coords.x][selected.coords.y] = held.piece;
-
-			bool captured = false;
-			//End move or continue if captures available
-			if (possibleMove->captures)
-			{
-				board[possibleMove->capture.x][possibleMove->capture.y]->setCaptured(true);
-				captured = true;
-				held.piece->recalculateMoves(selected.coords, board, m_boardSize);
-				capturedThisTurn = true;
-				capturingPieceCoords = selected.coords;
-			}
-
-			if (!(captured && held.piece->getCapturesCount() > 0))
-			{
-				//End move, remove captured pieces and change player
-				currentPlayer = currentPlayer == Player::Light
-					                ? Player::Dark
-					                : Player::Light;
-				capturedThisTurn = false;
-
-				for (int z = 0; z < m_boardSize; z++)
-				{
-					for (int x = 0; x < m_boardSize; x++)
-					{
-						if (board[z][x] != nullptr
-							&& board[z][x]->isCaptured())
-						{
-							delete board[z][x];
-							board[z][x] = nullptr;
-						}
-					}
-				}
-			}
-
-			if ((currentPlayer == Player::Light && selected.coords.x == 9)
-				|| (currentPlayer == Player::Dark && selected.coords.x == 0))
-			{
-				Piece* kingPiece = new KingPiece(*held.piece);
-				held.piece = nullptr;
-				delete board[selected.coords.x][selected.coords.y];
-				board[selected.coords.x][selected.coords.y] = kingPiece;
-			}
-
-			held = Selection::NONE;
-		}
-	}
-	else if (m_window->isMouseButtonPressed(SDL_BUTTON_LEFT)
-		&& selected != Selection::NONE
-		&& (board[selected.coords.x][selected.coords.y] != nullptr
-			&& board[selected.coords.x][selected.coords.y]->isMovable()))
-	{
-		held = selected;
-		held.piece->setHeld(true);
-	}
-
-	forEachPiece([&deltaTime](Piece* const piece)
-	{
-		piece->update(deltaTime);
-	});
+	m_held.piece->setDesiredPosition(intersectUp);
 }
 
-void Checkers::render(const Renderer& renderer) const
-{
-	forEachPiece([&renderer](const Piece* const piece)
-	{
-		piece->render(renderer);
-	});
-
-	if (held != Selection::NONE)
-	{
-		for (const auto& move : held.piece->getViableMoves())
-		{
-			Transform transform = {};
-			transform.position = positionAt(move.destination.y, move.destination.x);
-			transform.scale = glm::vec3(0.5f);
-			renderer.drawTriangles(
-				currentPlayer == Player::Light
-					? m_window->getPrototypes().getPieceLightMovable()
-					: m_window->getPrototypes().getPieceDarkMovable(),
-				transform
-			);
-		}
-	}
-
-	Transform tileTransform = {};
-	for (int z = 0; z < m_boardSize; z++)
-	{
-		for (int x = 0; x < m_boardSize; x++)
-		{
-			const glm::vec3 pos = positionAt(x, z);
-			tileTransform.position = pos;
-			tileTransform.position.y = -0.1f;
-			if (isDarkTile(x, z))
-			{
-				renderer.drawTriangles(
-					m_window->getPrototypes().getTileEven(),
-					tileTransform
-				);
-			}
-			else
-			{
-				renderer.drawTriangles(
-					m_window->getPrototypes().getTileOdd(),
-					tileTransform
-				);
-			}
-		}
-	}
-}
-
-void Checkers::forEachPiece(const std::function<void(Piece*)>& func) const
-{
-	for (int z = 0; z < m_boardSize; z++)
-	{
-		for (int x = 0; x < m_boardSize; x++)
-		{
-			if (board[z][x] != nullptr)
-				func(board[z][x]);
-		}
-	}
-}
-
-Checkers::Selection Checkers::getSelection() const
+void Checkers::updateSelection()
 {
 	const glm::vec2 mousePos = m_window->getMousePosition();
-	glm::vec3 intersect = VectorMath::linePlaneIntersect(
+	glm::vec3 intersection = VectorMath::linePlaneIntersect(
 		m_window->getCamera().forwardVec(mousePos),
 		m_window->getCamera().unProject(mousePos),
 		{0.0f, 1.0f, 0.0f},
 		{0.0f, 0.0f, 0.0f}
 	);
-	intersect.x += 5.0f;
-	intersect.z += 5.0f;
-	if (intersect.x >= 0.0f
-		&& intersect.x < 10.0f
-		&& intersect.z >= 0.0f
-		&& intersect.z <= 10.0f)
+	intersection.x += 5.0f;
+	intersection.z += 5.0f;
+	const glm::ivec2 selectedCoords = {
+		static_cast<int>(intersection.z),
+		static_cast<int>(intersection.x)
+	};
+	m_selected = isInBoardBounds(selectedCoords)
+		             ? Selection{
+			             m_board[selectedCoords.x][selectedCoords.y],
+			             selectedCoords
+		             }
+		             : Selection::NONE;
+}
+
+void Checkers::updateBoardState() const
+{
+	forEachPiece([&](Piece* const piece, int z, int x)
 	{
-		const glm::ivec2 selectedCoords = {
-			static_cast<int>(intersect.z),
-			static_cast<int>(intersect.x)
-		};
-		return {
-			board[selectedCoords.x][selectedCoords.y],
-			selectedCoords
-		};
-	}
-	else
+		piece->setMovable(false);
+		piece->recalculateMoves({z, x}, m_board, m_boardSize);
+	});
+
+	if (m_held == Selection::NONE)
 	{
-		return Selection::NONE;
+		const auto movables = getMovablePieces();
+		for (const auto& movable : movables)
+		{
+			m_board[movable.x][movable.y]->setMovable(true);
+		}
 	}
+}
+
+void Checkers::updatePieceStates() const
+{
+	forEachPiece([&](Piece* const piece, int z, int x)
+	{
+		piece->setState(PieceState::Neutral);
+		if (piece->isCaptured())
+			piece->setState(PieceState::Capture);
+		if (piece->isMovable())
+			piece->setState(PieceState::Movable);
+	});
+	if (m_held != Selection::NONE)
+	{
+		m_held.piece->setState(PieceState::Selected);
+		for (const auto& move : m_held.piece->getViableMoves())
+		{
+			if (move.captures)
+			{
+				m_board[move.capture.x][move.capture.y]->setState(PieceState::Capture);
+			}
+		}
+	}
+	else if (m_selected != Selection::NONE && m_selected.hasPiece())
+	{
+		m_selected.piece->setState(PieceState::Selected);
+	}
+}
+
+void Checkers::pickUpPiece()
+{
+	if (m_selected == Selection::NONE)
+	{
+		return;
+	}
+	if (m_selected.hasPiece() && m_selected.piece->isMovable())
+	{
+		m_held = m_selected;
+		m_held.piece->setHeld(true);
+	}
+	updateBoardState();
+}
+
+void Checkers::putBackPiece()
+{
+	if (m_held == Selection::NONE)
+	{
+		return;
+	}
+	m_held.piece->setHeld(false);
+	m_held.piece->setDesiredPosition(positionFromBoardCoords(m_held.coords.y, m_held.coords.x));
+	m_held = Selection::NONE;
+	updateBoardState();
+}
+
+void Checkers::makeMove(const Move& move)
+{
+	const glm::ivec2 newPieceCoords = {m_selected.coords.x, m_selected.coords.y};
+	m_held.piece->setHeld(false);
+	m_held.piece->setDesiredPosition(
+		positionFromBoardCoords(newPieceCoords.y, newPieceCoords.x)
+	);
+
+	m_board[m_held.coords.x][m_held.coords.y] = nullptr;
+	m_board[newPieceCoords.x][newPieceCoords.y] = m_held.piece;
+	m_held = Selection::NONE;
+
+	if (move.captures)
+	{
+		m_board[move.capture.x][move.capture.y]->setCaptured(true);
+		m_currentPlayer.capturedThisTurn = true;
+		m_currentPlayer.capturingPieceCoords = m_selected.coords;
+	}
+
+	checkForPieceUpgrade(newPieceCoords.x, newPieceCoords.y);
+	Piece* newPiece = m_board[newPieceCoords.x][newPieceCoords.y];
+	newPiece->recalculateMoves(newPieceCoords, m_board, m_boardSize);
+
+	if (!(m_currentPlayer.capturedThisTurn && newPiece->getCapturesCount() > 0))
+	{
+		finishMove();
+	}
+
+	updateBoardState();
+}
+
+void Checkers::checkForPieceUpgrade(int z, int x) const
+{
+	const Piece* checked = m_board[z][x];
+	if (checked == nullptr)
+	{
+		return;
+	}
+	if ((m_currentPlayer.pieceType == PieceType::Light && z == 0)
+		|| (m_currentPlayer.pieceType == PieceType::Dark && z == 9))
+	{
+		Piece* kingPiece = new KingPiece(*checked);
+		delete m_board[z][x];
+		m_board[z][x] = kingPiece;
+	}
+}
+
+void Checkers::finishMove()
+{
+	m_currentPlayer = m_currentPlayer.pieceType == PieceType::Light
+		                  ? Player{PieceType::Dark, false}
+		                  : Player{PieceType::Light, false};
+
+	forEachPiece([&](const Piece* const piece, int z, int x)
+	{
+		if (piece->isCaptured())
+		{
+			delete m_board[z][x];
+			m_board[z][x] = nullptr;
+		}
+	});
+}
+
+void Checkers::render(const Renderer& renderer) const
+{
+	forEachPiece([&renderer](const Piece* const piece, int z, int x)
+	{
+		piece->render(renderer);
+	});
+
+	if (m_held != Selection::NONE)
+	{
+		drawMoves(renderer);
+	}
+
+	drawTable(renderer);
+}
+
+void Checkers::drawMoves(const Renderer& renderer) const
+{
+	Transform transform = {};
+	transform.scale = glm::vec3(0.5f);
+	for (const auto& move : m_held.piece->getViableMoves())
+	{
+		transform.position = positionFromBoardCoords(move.destination.y, move.destination.x);
+		renderer.drawTriangles(
+			m_currentPlayer.pieceType == PieceType::Light
+				? m_window->getPrototypes().getPieceLightMovable()
+				: m_window->getPrototypes().getPieceDarkMovable(),
+			transform
+		);
+	}
+}
+
+void Checkers::drawTable(const Renderer& renderer) const
+{
+	Transform tileTransform = {};
+	for (int z = 0; z < m_boardSize; z++)
+	{
+		for (int x = 0; x < m_boardSize; x++)
+		{
+			const glm::vec3 pos = positionFromBoardCoords(x, z);
+			tileTransform.position = pos;
+			tileTransform.position.y = -0.1f;
+			renderer.drawTriangles(
+				isDarkTile(x, z)
+					? m_window->getPrototypes().getTileEven()
+					: m_window->getPrototypes().getTileOdd(),
+				tileTransform
+			);
+		}
+	}
+}
+
+void Checkers::forEachPiece(const std::function<void(Piece*, int, int)>& func) const
+{
+	for (int z = 0; z < m_boardSize; z++)
+	{
+		for (int x = 0; x < m_boardSize; x++)
+		{
+			if (m_board[z][x] != nullptr)
+				func(m_board[z][x], z, x);
+		}
+	}
+}
+
+bool Checkers::isDarkTile(int x, int z)
+{
+	return z % 2 == 0 && x % 2 != 0
+		|| z % 2 != 0 && x % 2 == 0;
+}
+
+glm::vec3 Checkers::positionFromBoardCoords(int x, int z) const
+{
+	return {
+		static_cast<float>(x) - static_cast<float>(m_boardSize) / 2.0f + 0.5f,
+		0.0f,
+		static_cast<float>(z) - static_cast<float>(m_boardSize) / 2.0f + 0.5f
+	};
+}
+
+bool Checkers::isInBoardBounds(const glm::ivec2& position) const
+{
+	return position.y >= 0
+		&& position.y < m_boardSize
+		&& position.x >= 0
+		&& position.x < m_boardSize;
+}
+
+std::vector<glm::ivec2> Checkers::getMovablePieces() const
+{
+	if (m_currentPlayer.capturedThisTurn)
+	{
+		return {m_currentPlayer.capturingPieceCoords};
+	}
+	const bool hasAnyCapture = hasCaptures();
+	std::vector<glm::ivec2> movables;
+	forEachPiece([&](const Piece* const piece, int z, int x)
+	{
+		if (piece->getType() == m_currentPlayer.pieceType
+			&& !piece->getViableMoves().empty()
+			&& (!hasAnyCapture
+				|| (hasAnyCapture
+					&& piece->getCapturesCount() > 0)))
+		{
+			movables.emplace_back(glm::ivec2{z, x});
+		}
+	});
+	return movables;
+}
+
+bool Checkers::hasCaptures() const
+{
+	for (int z = 0; z < m_boardSize; z++)
+	{
+		for (int x = 0; x < m_boardSize; x++)
+		{
+			if (m_board[z][x] != nullptr
+				&& m_board[z][x]->getType() == m_currentPlayer.pieceType
+				&& m_board[z][x]->getCapturesCount() > 0)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
