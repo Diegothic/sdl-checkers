@@ -30,6 +30,13 @@ private:
 
 public:
 	const Transform& getTransform() const { return m_transform; }
+
+	void setPosition(const glm::vec3& position)
+	{
+		m_desiredPosition = position;
+		m_transform.position = position;
+	}
+
 	void setDesiredPosition(const glm::vec3& position) { m_desiredPosition = position; }
 
 	void setInterpolationSpeed(const float& interSpeed) { m_interSpeed = interSpeed; }

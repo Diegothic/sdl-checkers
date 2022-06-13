@@ -19,7 +19,7 @@ enum GameState
 {
 	PlayerMoving,
 	ChangingPlayer,
-	Ended
+	GameOver
 };
 
 class Checkers
@@ -38,7 +38,7 @@ public:
 protected:
 	void updateStatePlayerMoving(const float& deltaTime);
 	void updateStateChangingPlayer(const float& deltaTime);
-	void updateStateEnded(const float& deltaTime);
+	void updateStateGameOver(const float& deltaTime);
 
 	void updateHeldPosition() const;
 	void updateSelection();
@@ -50,6 +50,7 @@ protected:
 	void makeMove(const Move& move);
 	void checkForPieceUpgrade(int z, int x) const;
 	void finishMove();
+	void checkForGameOver();
 
 protected:
 	void drawMoves(const Renderer& renderer) const;
@@ -75,4 +76,7 @@ private:
 
 	Selection m_selected = Selection::NONE;
 	Selection m_held = Selection::NONE;
+
+	float m_gameOverCd = 0.0f;
+	float** m_gameOverVelocity;
 };
