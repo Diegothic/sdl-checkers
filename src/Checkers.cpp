@@ -445,3 +445,37 @@ bool Checkers::hasCaptures() const
 	}
 	return false;
 }
+
+bool Checkers::animateCamera(const float& deltaTime) const
+{
+	bool finished = false;
+	Camera camera = m_window->getCamera();
+	glm::vec3 cameraRotation = camera.getRotation();
+	if (m_currentPlayer.pieceType == PieceType::Light)
+	{
+		if (cameraRotation.y > 0.0f)
+		{
+			cameraRotation.y -= 200.0f * deltaTime;
+		}
+		if (cameraRotation.y <= 0.0f)
+		{
+			cameraRotation.y = 0.0f;
+			finished = true;
+		}
+	}
+	else
+	{
+		if (cameraRotation.y < 180.0f)
+		{
+			cameraRotation.y += 200.0f * deltaTime;
+		}
+		if (cameraRotation.y >= 180.0f)
+		{
+			cameraRotation.y = 180.0f;
+			finished = true;
+		}
+	}
+	camera.setRotation(cameraRotation);
+	m_window->setCamera(camera);
+	return finished;
+}
