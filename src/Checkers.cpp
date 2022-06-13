@@ -74,13 +74,13 @@ void Checkers::update(const float& deltaTime)
 	switch (m_state)
 	{
 	case GameState::PlayerMoving:
-		updateStatePlayerMoving();
+		updateStatePlayerMoving(deltaTime);
 		break;
 	case GameState::ChangingPlayer:
-		updateStateChangingPlayer();
+		updateStateChangingPlayer(deltaTime);
 		break;
 	case GameState::Ended:
-		updateStateEnded();
+		updateStateEnded(deltaTime);
 		break;
 	}
 
@@ -91,7 +91,7 @@ void Checkers::update(const float& deltaTime)
 }
 
 
-void Checkers::updateStatePlayerMoving()
+void Checkers::updateStatePlayerMoving(const float& deltaTime)
 {
 	updateHeldPosition();
 	updateSelection();
@@ -123,11 +123,36 @@ void Checkers::updateStatePlayerMoving()
 	}
 }
 
-void Checkers::updateStateChangingPlayer()
+void Checkers::updateStateChangingPlayer(const float& deltaTime)
 {
+	const bool finishedAnimation = animateCamera(deltaTime);
+	forEachPiece([&](Piece* const piece, int z, int x)
+	{
+		piece->setState(PieceState::Neutral);
+		if (piece->isCaptured())
+		{
+			piece->setState(PieceState::Capture);
+			Transform pieceTransform = piece->getTransform();
+			pieceTransform.position.y += 0.05f;
+			piece->setDesiredPosition(pieceTransform.position);
+		}
+	});
+	if (finishedAnimation)
+	{
+		forEachPiece([&](const Piece* const piece, int z, int x)
+		{
+			if (piece->isCaptured())
+			{
+				delete m_board[z][x];
+				m_board[z][x] = nullptr;
+			}
+		});
+		m_state = GameState::PlayerMoving;
+		updateBoardState();
+	}
 }
 
-void Checkers::updateStateEnded()
+void Checkers::updateStateEnded(const float& deltaTime)
 {
 }
 
@@ -293,15 +318,7 @@ void Checkers::finishMove()
 	m_currentPlayer = m_currentPlayer.pieceType == PieceType::Light
 		                  ? Player{PieceType::Dark, false}
 		                  : Player{PieceType::Light, false};
-
-	forEachPiece([&](const Piece* const piece, int z, int x)
-	{
-		if (piece->isCaptured())
-		{
-			delete m_board[z][x];
-			m_board[z][x] = nullptr;
-		}
-	});
+	m_state = GameState::ChangingPlayer;
 }
 
 void Checkers::render(const Renderer& renderer) const

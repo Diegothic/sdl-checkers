@@ -42,13 +42,6 @@ void GameWindow::update(const float& deltaTime)
 	};
 	m_renderer.setLightSource(light);
 
-	glm::vec3 camRot = m_camera.getRotation();
-	if (isMouseButtonDown(SDL_BUTTON_MIDDLE))
-	{
-		camRot.y += getMouseDelta().x * 0.3f;
-	}
-	m_camera.setRotation(camRot);
-
 	m_game->update(deltaTime);
 
 	m_renderer.beginFrame(&m_camera);

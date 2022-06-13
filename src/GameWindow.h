@@ -21,6 +21,7 @@ protected:
 public:
 	const float& getElapsedTime() const { return m_elapsed; }
 	const Camera& getCamera() const { return m_camera; }
+	void setCamera(const Camera& camera) { m_camera = camera; }
 	const MeshPrototypes& getPrototypes() const { return m_prototypes; }
 
 private:

@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "GameWindow.h"
 #include "Piece.h"
 #include "VectorMath.hpp"
 
@@ -35,9 +36,9 @@ public:
 	void forEachPiece(const std::function<void(Piece*, int, int)>& func) const;
 
 protected:
-	void updateStatePlayerMoving();
-	void updateStateChangingPlayer();
-	void updateStateEnded();
+	void updateStatePlayerMoving(const float& deltaTime);
+	void updateStateChangingPlayer(const float& deltaTime);
+	void updateStateEnded(const float& deltaTime);
 
 	void updateHeldPosition() const;
 	void updateSelection();
@@ -61,6 +62,40 @@ protected:
 
 	std::vector<glm::ivec2> getMovablePieces() const;
 	bool hasCaptures() const;
+
+	bool animateCamera(const float& deltaTime) const
+	{
+		bool finished = false;
+		Camera camera = m_window->getCamera();
+		glm::vec3 cameraRotation = camera.getRotation();
+		if (m_currentPlayer.pieceType == PieceType::Light)
+		{
+			if (cameraRotation.y > 0.0f)
+			{
+				cameraRotation.y -= 200.0f * deltaTime;
+			}
+			if (cameraRotation.y <= 0.0f)
+			{
+				cameraRotation.y = 0.0f;
+				finished = true;
+			}
+		}
+		else
+		{
+			if (cameraRotation.y < 180.0f)
+			{
+				cameraRotation.y += 200.0f * deltaTime;
+			}
+			if (cameraRotation.y >= 180.0f)
+			{
+				cameraRotation.y = 180.0f;
+				finished = true;
+			}
+		}
+		camera.setRotation(cameraRotation);
+		m_window->setCamera(camera);
+		return finished;
+	}
 
 private:
 	GameWindow* m_window = nullptr;
