@@ -17,6 +17,7 @@ struct Player
 
 enum GameState
 {
+	TitleScreen,
 	PlayerMoving,
 	ChangingPlayer,
 	GameOver
@@ -29,7 +30,7 @@ public:
 	virtual ~Checkers();
 
 public:
-	void reset() const;
+	void reset();
 	void update(const float& deltaTime);
 	void render(const Renderer& renderer) const;
 
@@ -55,6 +56,8 @@ protected:
 protected:
 	void drawMoves(const Renderer& renderer) const;
 	void drawTable(const Renderer& renderer) const;
+	void drawTitle(const Renderer& renderer) const;
+	void drawGameOver(const Renderer& renderer) const;
 
 protected:
 	static bool isDarkTile(int x, int z);
@@ -71,12 +74,31 @@ private:
 	uint8_t m_boardSize = 10;
 
 	Piece*** m_board;
-	GameState m_state = GameState::PlayerMoving;
+	GameState m_state = GameState::TitleScreen;
 	Player m_currentPlayer = {};
 
 	Selection m_selected = Selection::NONE;
 	Selection m_held = Selection::NONE;
 
-	float m_gameOverCd = 0.0f;
-	float** m_gameOverVelocity;
+	float** m_gameOverJumpVelocity;
+
+private:
+	static constexpr int gameOverText[9][15] = {
+		{1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1},
+		{1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
+		{1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0},
+		{1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1},
+		{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
+		{1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
+		{1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1}
+	};
+
+	static constexpr int titleText[4][31] = {
+		{1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1},
+		{1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
+		{1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1},
+		{1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0}
+	};
 };

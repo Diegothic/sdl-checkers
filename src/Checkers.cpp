@@ -9,15 +9,15 @@ Checkers::Checkers(GameWindow* window, uint8_t boardSize)
 	  m_boardSize(boardSize)
 {
 	m_board = new Piece* *[m_boardSize];
-	m_gameOverVelocity = new float*[m_boardSize];
+	m_gameOverJumpVelocity = new float*[m_boardSize];
 	for (int i = 0; i < m_boardSize; i++)
 	{
 		m_board[i] = new Piece*[m_boardSize];
-		m_gameOverVelocity[i] = new float[m_boardSize];
+		m_gameOverJumpVelocity[i] = new float[m_boardSize];
 		for (int j = 0; j < m_boardSize; j++)
 		{
 			m_board[i][j] = nullptr;
-			m_gameOverVelocity[i][j] = 0.0f;
+			m_gameOverJumpVelocity[i][j] = 0.0f;
 		}
 	}
 }
@@ -35,13 +35,13 @@ Checkers::~Checkers()
 			}
 		}
 		delete[] m_board[i];
-		delete[] m_gameOverVelocity[i];
+		delete[] m_gameOverJumpVelocity[i];
 	}
 	delete[] m_board;
-	delete[] m_gameOverVelocity;
+	delete[] m_gameOverJumpVelocity;
 }
 
-void Checkers::reset() const
+void Checkers::reset()
 {
 	for (int z = 0; z < m_boardSize; z++)
 	{
@@ -71,13 +71,33 @@ void Checkers::reset() const
 			}
 		}
 	}
+	m_state = GameState::TitleScreen;
+	m_currentPlayer = {};
+	m_selected = Selection::NONE;
+	m_held = Selection::NONE;
 	updateBoardState();
+	Camera camera = m_window->getCamera();
+	camera.setRotation({-45.0f, 0.0f, 0.0f});
+	m_window->setCamera(camera);
 }
 
 void Checkers::update(const float& deltaTime)
 {
+	if (m_window->isKeyPressed(SDLK_ESCAPE))
+	{
+		m_window->close();
+		return;
+	}
+
 	switch (m_state)
 	{
+	case GameState::TitleScreen:
+		if (m_window->isKeyPressed(SDLK_SPACE)
+			|| m_window->isKeyPressed(SDLK_RETURN))
+		{
+			m_state = GameState::PlayerMoving;
+		}
+		return;
 	case GameState::PlayerMoving:
 		updateStatePlayerMoving(deltaTime);
 		break;
@@ -154,35 +174,29 @@ void Checkers::updateStateChangingPlayer(const float& deltaTime)
 		});
 		m_state = GameState::PlayerMoving;
 		updateBoardState();
+		checkForGameOver();
 	}
 }
 
 void Checkers::updateStateGameOver(const float& deltaTime)
 {
+	if (m_window->isKeyPressed(SDLK_SPACE)
+		|| m_window->isKeyPressed(SDLK_RETURN))
+	{
+		reset();
+		m_state = GameState::TitleScreen;
+		return;
+	}
 	forEachPiece([&](Piece* const piece, int z, int x)
 	{
 		Transform transform = piece->getTransform();
 		if (transform.position.y <= 0.0f)
 		{
-			const int random = rand() % 4;
-			switch (random)
-			{
-			case 0:
-				m_gameOverVelocity[z][x] = 0.7f;
-				break;
-			case 1:
-				m_gameOverVelocity[z][x] = 0.8f;
-				break;
-			case 2:
-				m_gameOverVelocity[z][x] = 0.9f;
-				break;
-			case 3:
-				m_gameOverVelocity[z][x] = 1.0f;
-				break;
-			}
+			const int random = rand() % 5;
+			m_gameOverJumpVelocity[z][x] = 0.5f + random / 5.0f;
 		}
-		transform.position.y += m_gameOverVelocity[z][x];
-		m_gameOverVelocity[z][x] -= deltaTime * 5.0f;
+		transform.position.y += m_gameOverJumpVelocity[z][x];
+		m_gameOverJumpVelocity[z][x] -= deltaTime * 5.0f;
 		piece->setDesiredPosition(transform.position);
 	});
 
@@ -330,8 +344,10 @@ void Checkers::makeMove(const Move& move)
 	{
 		finishMove();
 	}
-
-	updateBoardState();
+	else
+	{
+		updateBoardState();
+	}
 }
 
 void Checkers::checkForPieceUpgrade(int z, int x) const
@@ -397,62 +413,28 @@ void Checkers::checkForGameOver()
 
 void Checkers::render(const Renderer& renderer) const
 {
-	forEachPiece([&renderer](const Piece* const piece, int z, int x)
+	if (m_state == GameState::TitleScreen)
 	{
-		piece->render(renderer);
-	});
+		drawTitle(renderer);
+	}
+	else
+	{
+		forEachPiece([&renderer](const Piece* const piece, int z, int x)
+		{
+			piece->render(renderer);
+		});
 
-	if (m_held != Selection::NONE)
-	{
-		drawMoves(renderer);
+		if (m_held != Selection::NONE)
+		{
+			drawMoves(renderer);
+		}
 	}
 
 	drawTable(renderer);
 
 	if (m_state == GameState::GameOver)
 	{
-		Camera camera = m_window->getCamera();
-		glm::vec3 cameraRotation = camera.getRotation();
-		const int text[9][15] =
-		{
-			{1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1},
-			{1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
-			{1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0},
-			{1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1},
-			{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			{1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1},
-			{1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
-			{1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
-			{1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1}
-		};
-		for (int i = 0; i < 9; ++i)
-		{
-			for (int j = 0; j < 15; ++j)
-			{
-				if (text[i][j] == 1)
-				{
-					Transform transform = {};
-					transform.position = {j * 0.5f - 7.5f * 0.5f, 3.0f, i * 0.5f - 4.5 * 0.5f + 1.0f};
-					transform.scale = glm::vec3(0.6f);
-					transform.rotation.x = -90.0f;
-					glm::mat4 mat = glm::mat4(1.0f);
-					mat = glm::rotate(mat, glm::radians(-camera.getRotation().z), {0.0f, 0.0f, 1.0f});
-					mat = glm::rotate(mat, glm::radians(camera.getRotation().y), {0.0f, 1.0f, 0.0f});
-					mat = glm::rotate(mat, glm::radians(-camera.getRotation().x), {1.0f, 0.0f, 0.0f});
-					transform.position = mat * glm::vec4{
-						transform.position.x, transform.position.y, transform.position.z, 0.0f
-					};
-					if (m_currentPlayer.pieceType == PieceType::Light)
-					{
-						renderer.drawTriangles(m_window->getPrototypes().getPieceLightSelected(), transform);
-					}
-					else
-					{
-						renderer.drawTriangles(m_window->getPrototypes().getPieceDarkNeutral(), transform);
-					}
-				}
-			}
-		}
+		drawGameOver(renderer);
 	}
 }
 
@@ -488,6 +470,64 @@ void Checkers::drawTable(const Renderer& renderer) const
 					: m_window->getPrototypes().getTileOdd(),
 				tileTransform
 			);
+		}
+	}
+}
+
+void Checkers::drawTitle(const Renderer& renderer) const
+{
+	const Camera camera = m_window->getCamera();
+	glm::mat4 mat = glm::mat4(1.0f);
+	mat = glm::rotate(mat, glm::radians(30.0f), {1.0f, 0.0f, 0.0f});
+	for (int i = 0; i < 9; ++i)
+	{
+		for (int j = 0; j < 31; ++j)
+		{
+			if (titleText[i][j] == 1)
+			{
+				Transform transform = {};
+				transform.position = {j * 0.2f - 15.5f * 0.2f, 4.0f, i * 0.2f - 4.5f * 0.2f + 1.0f};
+				transform.scale = glm::vec3(0.3f);
+				transform.position = mat * glm::vec4{
+					transform.position.x, transform.position.y, transform.position.z, 0.0f
+				};
+				transform.position.z += 2.0f;
+				transform.rotation.x = m_window->getElapsedTime() * 100.0f;
+				renderer.drawTriangles(m_window->getPrototypes().getPieceLightSelected(), transform);
+			}
+		}
+	}
+}
+
+void Checkers::drawGameOver(const Renderer& renderer) const
+{
+	const Camera camera = m_window->getCamera();
+	glm::mat4 mat = glm::mat4(1.0f);
+	mat = glm::rotate(mat, glm::radians(-camera.getRotation().z), {0.0f, 0.0f, 1.0f});
+	mat = glm::rotate(mat, glm::radians(camera.getRotation().y), {0.0f, 1.0f, 0.0f});
+	mat = glm::rotate(mat, glm::radians(-camera.getRotation().x), {1.0f, 0.0f, 0.0f});
+	for (int i = 0; i < 9; ++i)
+	{
+		for (int j = 0; j < 15; ++j)
+		{
+			if (gameOverText[i][j] == 1)
+			{
+				Transform transform = {};
+				transform.position = {j * 0.5f - 7.5f * 0.5f, 3.0f, i * 0.5f - 4.5f * 0.5f + 1.0f};
+				transform.scale = glm::vec3(0.7f);
+				transform.rotation.x = -90.0f;
+				transform.position = mat * glm::vec4{
+					transform.position.x, transform.position.y, transform.position.z, 0.0f
+				};
+				if (m_currentPlayer.pieceType == PieceType::Light)
+				{
+					renderer.drawTriangles(m_window->getPrototypes().getPieceLightSelected(), transform);
+				}
+				else
+				{
+					renderer.drawTriangles(m_window->getPrototypes().getPieceDarkNeutral(), transform);
+				}
+			}
 		}
 	}
 }
